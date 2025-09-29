@@ -149,15 +149,33 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
     try {
       const parsed = JSON.parse(jsonInput);
       
-      // Validate the JSON structure
-      if (!Array.isArray(parsed)) {
-        throw new Error('JSON must be an array of questions');
+      let questionsToImport: any[] = [];
+      let quizMetadata: { name?: string; description?: string; tags?: string[] } = {};
+      
+      // Check if it's a complete quiz object or just questions array
+      if (Array.isArray(parsed)) {
+        // It's just an array of questions
+        questionsToImport = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        // It's a complete quiz object
+        if (Array.isArray(parsed.questions)) {
+          questionsToImport = parsed.questions;
+          quizMetadata = {
+            name: parsed.name,
+            description: parsed.description,
+            tags: parsed.tags
+          };
+        } else {
+          throw new Error('Invalid format: Expected either an array of questions or an object with a "questions" array');
+        }
+      } else {
+        throw new Error('Invalid format: Expected either an array of questions or a quiz object');
       }
 
       const validatedQuestions: QuizQuestion[] = [];
       
-      for (let i = 0; i < parsed.length; i++) {
-        const question = parsed[i];
+      for (let i = 0; i < questionsToImport.length; i++) {
+        const question = questionsToImport[i];
         
         // Validate each question
         if (!question.type || !['singleSelect', 'multiSelect'].includes(question.type)) {
@@ -196,9 +214,12 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
         });
       }
       
-      // Add validated questions to the form
+      // Update form data with questions and metadata
       setFormData(prev => ({
         ...prev,
+        name: quizMetadata.name || prev.name,
+        description: quizMetadata.description || prev.description,
+        tags: quizMetadata.tags || prev.tags,
         questions: [...prev.questions, ...validatedQuestions]
       }));
       
@@ -206,7 +227,8 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
       setShowJsonImport(false);
       
       // Show success message
-      alert(`Successfully imported ${validatedQuestions.length} questions!`);
+      const metadataMessage = quizMetadata.name ? ` with metadata` : '';
+      alert(`Successfully imported ${validatedQuestions.length} questions${metadataMessage}!`);
       
     } catch (error) {
       setJsonError(error instanceof Error ? error.message : 'Invalid JSON format');
@@ -218,15 +240,33 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
     try {
       const parsed = JSON.parse(jsonInput);
       
-      // Validate the JSON structure (same as above)
-      if (!Array.isArray(parsed)) {
-        throw new Error('JSON must be an array of questions');
+      let questionsToImport: any[] = [];
+      let quizMetadata: { name?: string; description?: string; tags?: string[] } = {};
+      
+      // Check if it's a complete quiz object or just questions array
+      if (Array.isArray(parsed)) {
+        // It's just an array of questions
+        questionsToImport = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        // It's a complete quiz object
+        if (Array.isArray(parsed.questions)) {
+          questionsToImport = parsed.questions;
+          quizMetadata = {
+            name: parsed.name,
+            description: parsed.description,
+            tags: parsed.tags
+          };
+        } else {
+          throw new Error('Invalid format: Expected either an array of questions or an object with a "questions" array');
+        }
+      } else {
+        throw new Error('Invalid format: Expected either an array of questions or a quiz object');
       }
 
       const validatedQuestions: QuizQuestion[] = [];
       
-      for (let i = 0; i < parsed.length; i++) {
-        const question = parsed[i];
+      for (let i = 0; i < questionsToImport.length; i++) {
+        const question = questionsToImport[i];
         
         if (!question.type || !['singleSelect', 'multiSelect'].includes(question.type)) {
           throw new Error(`Question ${i + 1}: Invalid or missing type. Must be 'singleSelect' or 'multiSelect'`);
@@ -263,16 +303,20 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
         });
       }
       
-      // Replace all questions
+      // Replace all data with imported content
       setFormData(prev => ({
         ...prev,
+        name: quizMetadata.name || prev.name,
+        description: quizMetadata.description || prev.description,
+        tags: quizMetadata.tags || prev.tags,
         questions: validatedQuestions
       }));
       
       setJsonInput('');
       setShowJsonImport(false);
       
-      alert(`Successfully replaced with ${validatedQuestions.length} questions!`);
+      const metadataMessage = quizMetadata.name ? ` with metadata` : '';
+      alert(`Successfully replaced with ${validatedQuestions.length} questions${metadataMessage}!`);
       
     } catch (error) {
       setJsonError(error instanceof Error ? error.message : 'Invalid JSON format');
@@ -280,34 +324,39 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
   };
 
   const generateSampleJson = () => {
-    const sample = [
-      {
-        "type": "singleSelect",
-        "question": "What is the capital of France?",
-        "options": [
-          "London",
-          "Berlin",
-          "Paris",
-          "Madrid"
-        ],
-        "answer": [2],
-        "explanation": "Paris is the capital and most populous city of France."
-      },
-      {
-        "type": "multiSelect", 
-        "question": "Which of the following are programming languages?",
-        "options": [
-          "JavaScript",
-          "HTML",
-          "Python",
-          "CSS"
-        ],
-        "answer": [0, 2],
-        "explanation": "JavaScript and Python are programming languages, while HTML and CSS are markup and styling languages respectively."
-      }
-    ];
+    const sampleFullQuiz = {
+      "name": "Sample Quiz",
+      "description": "A sample quiz with basic questions to demonstrate the format",
+      "tags": ["Sample", "Education", "Basic"],
+      "questions": [
+        {
+          "type": "singleSelect",
+          "question": "What is the capital of France?",
+          "options": [
+            "London",
+            "Berlin",
+            "Paris",
+            "Madrid"
+          ],
+          "answer": [2],
+          "explanation": "Paris is the capital and most populous city of France."
+        },
+        {
+          "type": "multiSelect", 
+          "question": "Which of the following are programming languages?",
+          "options": [
+            "JavaScript",
+            "HTML",
+            "Python",
+            "CSS"
+          ],
+          "answer": [0, 2],
+          "explanation": "JavaScript and Python are programming languages, while HTML and CSS are markup and styling languages respectively."
+        }
+      ]
+    };
     
-    setJsonInput(JSON.stringify(sample, null, 2));
+    setJsonInput(JSON.stringify(sampleFullQuiz, null, 2));
   };
 
   return (
@@ -362,7 +411,7 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Paste your JSON questions here:
+                    Paste your JSON (complete quiz or questions array):
                   </label>
                   <button
                     onClick={generateSampleJson}
@@ -387,24 +436,49 @@ export default function QuizCreator({ quiz, onSave, onCancel }: QuizCreatorProps
                 </div>
               )}
 
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Expected JSON Format:</h4>
-                <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Format 1: Complete Quiz Object (Recommended)</h4>
+                  <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+{`{
+  "name": "Quiz Title",
+  "description": "Quiz description",
+  "tags": ["tag1", "tag2"],
+  "questions": [
+    {
+      "type": "singleSelect",
+      "question": "Your question?",
+      "options": ["Option 1", "Option 2", "Option 3"],
+      "answer": [2],
+      "explanation": "Explanation here"
+    }
+  ]
+}`}
+                  </pre>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Format 2: Questions Array Only</h4>
+                  <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
 {`[
   {
     "type": "singleSelect",
-    "question": "Your question here?",
-    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "question": "Your question?",
+    "options": ["Option 1", "Option 2", "Option 3"],
     "answer": [2],
-    "explanation": "Explanation of the correct answer"
+    "explanation": "Explanation here"
   }
 ]`}
-                </pre>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  </pre>
+                </div>
+                
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <strong>Field Descriptions:</strong><br/>
                   • <strong>type</strong>: &quot;singleSelect&quot; or &quot;multiSelect&quot;<br/>
                   • <strong>options</strong>: Array of answer choices<br/>
                   • <strong>answer</strong>: Array of correct option indices (0-based)<br/>
-                  • <strong>explanation</strong>: Text explaining the correct answer
+                  • <strong>explanation</strong>: Text explaining the correct answer<br/>
+                  • <strong>name/description/tags</strong>: Optional quiz metadata (Format 1 only)
                 </p>
               </div>
 
