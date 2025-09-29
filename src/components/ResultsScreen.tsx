@@ -11,7 +11,11 @@ interface ResultsScreenProps {
 export default function ResultsScreen({ session, onRestartQuiz }: ResultsScreenProps) {
   const { score, userAnswers, questions, startTime, endTime } = session;
   const correctAnswers = userAnswers.filter(answer => answer.isCorrect).length;
-  const totalTime = endTime ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000) : 0;
+  const totalTime = endTime && startTime ? (() => {
+    const endTimeObj = typeof endTime === 'string' ? new Date(endTime) : endTime;
+    const startTimeObj = typeof startTime === 'string' ? new Date(startTime) : startTime;
+    return Math.floor((endTimeObj.getTime() - startTimeObj.getTime()) / 1000);
+  })() : 0;
   const averageTimePerQuestion = calculateAverageTime(userAnswers);
   const performance = getPerformanceLevel(score);
 

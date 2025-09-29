@@ -2,6 +2,8 @@
 
 A comprehensive Next.js quiz application built with TypeScript and TailwindCSS that provides interactive learning with detailed statistics and smart analytics.
 
+🚀 **[Live Demo on GitHub Pages](https://ultimateboi.github.io/QuizApp/)**
+
 ## Features
 
 - **🎯 Interactive Quizzes**: Engage with carefully crafted questions that challenge your understanding
@@ -10,6 +12,34 @@ A comprehensive Next.js quiz application built with TypeScript and TailwindCSS t
 - **⏱️ Time Tracking**: Monitor your response times and optimize your test-taking strategies
 - **📈 Statistics Dashboard**: View comprehensive statistics including scores, timing, and performance trends
 - **💾 Local Storage**: Your quiz history is saved locally and persists between sessions
+
+## Deployment
+
+This application is automatically deployed to GitHub Pages on every push to the main branch. The deployment is handled by a GitHub Actions workflow that:
+
+1. Builds the Next.js application for static export
+2. Optimizes assets for production
+3. Deploys to GitHub Pages with proper routing
+
+### GitHub Pages Configuration
+
+The app is configured for static export with the following optimizations:
+- Static HTML generation for all routes
+- Asset optimization and minification
+- Proper base path configuration for GitHub Pages subdirectory hosting
+- Image optimization disabled for static hosting compatibility
+
+### Automatic Deployment Workflow
+
+Every push to the main branch triggers an automated deployment via GitHub Actions:
+```yaml
+# .github/workflows/deploy.yml
+- Checkout code
+- Setup Node.js environment  
+- Install dependencies
+- Build for production
+- Deploy to GitHub Pages
+```
 
 ## Quiz Data Format
 
@@ -51,7 +81,7 @@ The application supports JSON quiz data in the following format:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/UltimateBoi/QuizApp.git
 cd QuizApp
 ```
 
@@ -71,8 +101,9 @@ npm run dev
 
 ```bash
 npm run build
-npm start
 ```
+
+This generates a static export in the `out/` directory suitable for GitHub Pages deployment.
 
 ## Project Structure
 
@@ -99,11 +130,12 @@ src/
 
 ## Technology Stack
 
-- **Next.js 15**: React framework with App Router
+- **Next.js 15**: React framework with App Router and static export
 - **TypeScript**: Type-safe JavaScript
 - **TailwindCSS**: Utility-first CSS framework
 - **React Hooks**: State management and side effects
 - **Local Storage**: Client-side data persistence
+- **GitHub Pages**: Static site hosting with automated deployment
 
 ## Features in Detail
 
@@ -127,6 +159,16 @@ The application is fully responsive and works on:
 - Desktop computers
 - Tablets
 - Mobile phones
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+Changes to the main branch will automatically deploy to GitHub Pages!
 
 ## License
 
