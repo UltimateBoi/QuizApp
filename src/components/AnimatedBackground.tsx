@@ -1,14 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 
 interface AnimatedBackgroundProps {
   enabled: boolean;
   reduced?: boolean;
 }
 
-export default function AnimatedBackground({ enabled, reduced }: AnimatedBackgroundProps) {
+function AnimatedBackground({ enabled, reduced }: AnimatedBackgroundProps) {
   const [mounted, setMounted] = useState(false);
+
+  // Memoize orb properties to prevent regeneration on every render
+  const orbProperties = useMemo(() => {
+    return [...Array(6)].map(() => ({
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      width: Math.random() * 200 + 50,
+      height: Math.random() * 200 + 50,
+      animationDelay: Math.random() * 5,
+      animationDuration: Math.random() * 20 + 10,
+    }));
+  }, []); // Empty dependency array ensures this only runs once
 
   useEffect(() => {
     setMounted(true);
@@ -20,7 +32,7 @@ export default function AnimatedBackground({ enabled, reduced }: AnimatedBackgro
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Floating Orbs */}
       <div className={`absolute inset-0 ${reduced ? 'animate-pulse' : ''}`}>
-        {[...Array(reduced ? 3 : 6)].map((_, i) => (
+        {orbProperties.slice(0, reduced ? 3 : 6).map((orb, i) => (
           <div
             key={i}
             className={`absolute rounded-full bg-gradient-to-r opacity-20 dark:opacity-10 ${
@@ -37,12 +49,12 @@ export default function AnimatedBackground({ enabled, reduced }: AnimatedBackgro
                 : 'from-purple-400 to-pink-400'
             }`}
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 200 + 50}px`,
-              height: `${Math.random() * 200 + 50}px`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: reduced ? '2s' : `${Math.random() * 20 + 10}s`,
+              left: `${orb.left}%`,
+              top: `${orb.top}%`,
+              width: `${orb.width}px`,
+              height: `${orb.height}px`,
+              animationDelay: `${orb.animationDelay}s`,
+              animationDuration: reduced ? '2s' : `${orb.animationDuration}s`,
             }}
           />
         ))}
@@ -69,3 +81,5 @@ export default function AnimatedBackground({ enabled, reduced }: AnimatedBackgro
     </div>
   );
 }
+
+export default memo(AnimatedBackground);

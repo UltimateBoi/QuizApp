@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useCallback, useEffect } from 'react';
 import { QuizSession } from '@/types/quiz';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSettings } from '@/hooks/useSettings';
@@ -17,11 +17,20 @@ function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
   const [quizSessions, setQuizSessions] = useLocalStorage<QuizSession[]>('quiz-sessions', []);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { settings, updateSettings, resetSettings } = useSettings();
+  const [isClient, setIsClient] = useState(false);
+  const { settings, updateSettings, resetSettings, isLoaded } = useSettings();
 
-  const handleQuizComplete = (session: QuizSession) => {
+  const handleQuizComplete = useCallback((session: QuizSession) => {
     setQuizSessions(prev => [...prev, session]);
-  };
+  }, [setQuizSessions]);
+
+  const handleSettingsOpen = useCallback(() => setIsSettingsOpen(true), []);
+  const handleSettingsClose = useCallback(() => setIsSettingsOpen(false), []);
+
+  // Ensure client-side hydration is complete
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const renderHome = () => (
     <div className="max-w-4xl mx-auto text-center">
@@ -70,25 +79,25 @@ function HomeContent() {
           </div>
         </div>
 
-        {quizSessions.length > 0 && (
-          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold text-gray-800 mb-2">Your Progress</h3>
+        {isClient && quizSessions.length > 0 && (
+          <div className={`mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 ${isLoaded && settings.animations ? 'animate-fade-in' : ''}`} style={{ animationDelay: '700ms' }}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Your Progress</h3>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="font-medium text-gray-800">{quizSessions.length}</div>
-                <div className="text-gray-600">Quizzes Taken</div>
+                <div className="font-medium text-gray-900 dark:text-white">{quizSessions.length}</div>
+                <div className="text-gray-700 dark:text-gray-200">Quizzes Taken</div>
               </div>
               <div>
-                <div className="font-medium text-gray-800">
+                <div className="font-medium text-gray-900 dark:text-white">
                   {Math.round(quizSessions.reduce((sum, s) => sum + s.score, 0) / quizSessions.length)}%
                 </div>
-                <div className="text-gray-600">Average Score</div>
+                <div className="text-gray-700 dark:text-gray-200">Average Score</div>
               </div>
               <div>
-                <div className="font-medium text-gray-800">
+                <div className="font-medium text-gray-900 dark:text-white">
                   {Math.max(...quizSessions.map(s => s.score))}%
                 </div>
-                <div className="text-gray-600">Best Score</div>
+                <div className="text-gray-700 dark:text-gray-200">Best Score</div>
               </div>
             </div>
           </div>
@@ -104,7 +113,7 @@ function HomeContent() {
           <button
             onClick={() => setAppState('statistics')}
             className="btn-secondary px-8 py-3 text-lg"
-            disabled={quizSessions.length === 0}
+            disabled={!isClient || quizSessions.length === 0}
           >
             View Statistics
           </button>
@@ -113,62 +122,60 @@ function HomeContent() {
     </div>
   );
 
-  if (appState === 'quiz') {
-    return (
-      <div className={settings.animations ? 'animate-slide-in-right' : ''}>
-        <div className="mb-6 text-center">
-          <button
-            onClick={() => setAppState('home')}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </button>
-        </div>
-        <Quiz 
-          questions={sampleQuestions}
-          onQuizComplete={handleQuizComplete}
-        />
-      </div>
-    );
-  }
-
-  if (appState === 'statistics') {
-    return (
-      <div className={settings.animations ? 'animate-slide-in-left' : ''}>
-        <div className="mb-6 text-center">
-          <button
-            onClick={() => setAppState('home')}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </button>
-        </div>
-        <Statistics sessions={quizSessions} />
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       <AnimatedBackground 
         enabled={settings.backgroundAnimations && settings.animations} 
         reduced={settings.reducedMotion}
       />
-      <SettingsButton onClick={() => setIsSettingsOpen(true)} />
+      <SettingsButton onClick={handleSettingsOpen} />
       
-      <div className={`transition-all duration-500 ${settings.animations ? 'animate-fade-in' : ''}`}>
-        {renderHome()}
-      </div>
+      {appState === 'quiz' && (
+        <div className={settings.animations ? 'animate-slide-in-right' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <Quiz 
+            questions={sampleQuestions}
+            onQuizComplete={handleQuizComplete}
+          />
+        </div>
+      )}
+
+      {appState === 'statistics' && (
+        <div className={settings.animations ? 'animate-slide-in-left' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <Statistics sessions={quizSessions} />
+        </div>
+      )}
+
+      {appState === 'home' && (
+        <div className={`transition-all duration-500 ${settings.animations ? 'animate-fade-in' : ''}`}>
+          {renderHome()}
+        </div>
+      )}
 
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={handleSettingsClose}
         settings={settings}
         onUpdateSettings={updateSettings}
         onResetSettings={resetSettings}
