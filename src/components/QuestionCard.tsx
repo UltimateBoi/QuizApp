@@ -8,8 +8,10 @@ interface QuestionCardProps {
   totalQuestions: number;
   selectedOptions: number[];
   onOptionSelect: (optionIndex: number) => void;
+  onSubmitAnswer: () => void;
   showExplanation: boolean;
   isAnswered: boolean;
+  autoSubmit: boolean;
 }
 
 export default function QuestionCard({
@@ -18,9 +20,15 @@ export default function QuestionCard({
   totalQuestions,
   selectedOptions,
   onOptionSelect,
+  onSubmitAnswer,
   showExplanation,
-  isAnswered
+  isAnswered,
+  autoSubmit
 }: QuestionCardProps) {
+  
+  const isMultiSelect = question.type === 'multiSelect';
+  const hasSelectedAnswers = selectedOptions.length > 0;
+  const canSubmit = hasSelectedAnswers && !isAnswered;
   return (
     <div className="card max-w-4xl mx-auto animate-slide-in-up">
       <div className="mb-6">
@@ -101,6 +109,23 @@ export default function QuestionCard({
           );
         })}
       </div>
+
+      {/* Submit button for multi-select questions or when auto-submit is disabled */}
+      {!isAnswered && !showExplanation && (isMultiSelect || !autoSubmit) && (
+        <div className="mt-6">
+          <button
+            onClick={onSubmitAnswer}
+            disabled={!canSubmit}
+            className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-300 ${
+              canSubmit
+                ? 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transform'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isMultiSelect ? 'Submit Answer' : 'Submit'}
+          </button>
+        </div>
+      )}
 
       {showExplanation && question.explanation && (
         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-slide-in-up">

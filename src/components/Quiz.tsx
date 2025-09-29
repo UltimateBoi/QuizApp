@@ -38,11 +38,29 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
       }
     } else {
       // Multi-select logic
-      setSelectedOptions(prev => 
-        prev.includes(optionIndex) 
-          ? prev.filter(opt => opt !== optionIndex)
-          : [...prev, optionIndex]
-      );
+      const newSelection = selectedOptions.includes(optionIndex) 
+        ? selectedOptions.filter(opt => opt !== optionIndex)
+        : [...selectedOptions, optionIndex];
+      
+      setSelectedOptions(newSelection);
+      
+      // Auto-submit for multi-select if all correct answers are selected
+      if (settings.autoSubmit && newSelection.length > 0) {
+        // Check if the selected answers match exactly the correct answers
+        const sortedSelected = [...newSelection].sort();
+        const sortedCorrect = [...currentQuestion.answer].sort();
+        
+        if (sortedSelected.length === sortedCorrect.length && 
+            sortedSelected.every((val, index) => val === sortedCorrect[index])) {
+          setTimeout(() => handleSubmitAnswer(newSelection), 500);
+        }
+      }
+    }
+  };
+
+  const handleManualSubmit = () => {
+    if (selectedOptions.length > 0) {
+      handleSubmitAnswer();
     }
   };
 
@@ -139,8 +157,10 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
         totalQuestions={questions.length}
         selectedOptions={selectedOptions}
         onOptionSelect={handleOptionSelect}
+        onSubmitAnswer={handleManualSubmit}
         showExplanation={showExplanation}
         isAnswered={isAnswered}
+        autoSubmit={settings.autoSubmit || false}
       />
 
       <div className={`mt-8 flex justify-center space-x-4 ${settings.animations ? 'animate-fade-in' : ''}`}>

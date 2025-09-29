@@ -66,6 +66,19 @@
       ],
       "answer": [0],
       "explanation": "SQL stands for Structured Query Language. It's a domain-specific language used for managing and manipulating relational databases."
+    },
+    {
+      "type": "multiSelect",
+      "question": "Which of the following are sorting algorithms?",
+      "options": [
+        "Quick Sort",
+        "Binary Search",
+        "Merge Sort",
+        "Hash Table",
+        "Bubble Sort"
+      ],
+      "answer": [0, 2, 4],
+      "explanation": "Quick Sort, Merge Sort, and Bubble Sort are all sorting algorithms. Binary Search is a searching algorithm, and Hash Table is a data structure."
     }
   ]
 }
