@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { QuizSession } from '@/types/quiz';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import Quiz from '@/components/Quiz';
@@ -9,7 +9,7 @@ import { sampleQuestions } from '@/data/questions';
 
 type AppState = 'home' | 'quiz' | 'statistics';
 
-export default function Home() {
+function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
   const [quizSessions, setQuizSessions] = useLocalStorage<QuizSession[]>('quiz-sessions', []);
 
@@ -143,4 +143,12 @@ export default function Home() {
   }
 
   return renderHome();
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
 }
