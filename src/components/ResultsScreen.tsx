@@ -20,34 +20,38 @@ export default function ResultsScreen({ session, onRestartQuiz }: ResultsScreenP
   const performance = getPerformanceLevel(score);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="card text-center">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Quiz Complete!</h1>
-          <div className="text-6xl font-bold mb-4 text-primary-600">
-            {score}%
+          <div className="animate-bounce-in">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Quiz Complete!</h1>
+            <div className="text-6xl font-bold mb-4 text-blue-600 dark:text-blue-400 animate-scale-in">
+              {score}%
+            </div>
           </div>
-          <p className={`text-xl font-semibold ${performance.color}`}>
-            {performance.level}
-          </p>
-          <p className="text-gray-600 mt-2">{performance.message}</p>
+          <div className="animate-slide-in-up" style={{ animationDelay: '300ms' }}>
+            <p className={`text-xl font-semibold ${performance.color}`}>
+              {performance.level}
+            </p>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">{performance.message}</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-800">{correctAnswers}</div>
-            <div className="text-gray-600">Correct Answers</div>
-            <div className="text-sm text-gray-500">out of {questions.length}</div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-left" style={{ animationDelay: '400ms' }}>
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{correctAnswers}</div>
+            <div className="text-gray-600 dark:text-gray-300">Correct Answers</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">out of {questions.length}</div>
           </div>
           
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-800">{formatTime(totalTime)}</div>
-            <div className="text-gray-600">Total Time</div>
-            <div className="text-sm text-gray-500">minutes:seconds</div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-up" style={{ animationDelay: '500ms' }}>
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{formatTime(totalTime)}</div>
+            <div className="text-gray-600 dark:text-gray-300">Total Time</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">minutes:seconds</div>
           </div>
           
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-800">{formatTime(averageTimePerQuestion)}</div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-right" style={{ animationDelay: '600ms' }}>
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{formatTime(averageTimePerQuestion)}</div>
             <div className="text-gray-600">Avg per Question</div>
             <div className="text-sm text-gray-500">minutes:seconds</div>
           </div>
@@ -94,7 +98,7 @@ export default function ResultsScreen({ session, onRestartQuiz }: ResultsScreenP
             Take Quiz Again
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = '/QuizApp'}
             className="btn-secondary px-8"
           >
             Back to Home

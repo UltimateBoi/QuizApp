@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { QuizQuestion, UserAnswer, QuizSession } from '@/types/quiz';
 import { calculateScore, checkAnswer } from '@/utils/quiz';
+import { useSettings } from '@/hooks/useSettings';
 import QuestionCard from './QuestionCard';
 import ResultsScreen from './ResultsScreen';
 
@@ -19,6 +20,8 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
   const [quizComplete, setQuizComplete] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<Date>(new Date());
   const [quizStartTime] = useState<Date>(new Date());
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const { settings } = useSettings();
 
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
@@ -26,7 +29,13 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
 
   const handleOptionSelect = (optionIndex: number) => {
     if (currentQuestion.type === 'singleSelect') {
-      setSelectedOptions([optionIndex]);
+      const newSelection = [optionIndex];
+      setSelectedOptions(newSelection);
+      
+      // Auto-submit for single select if enabled
+      if (settings.autoSubmit) {
+        setTimeout(() => handleSubmitAnswer(newSelection), 100);
+      }
     } else {
       // Multi-select logic
       setSelectedOptions(prev => 
@@ -37,13 +46,25 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
     }
   };
 
-  const handleSubmitAnswer = () => {
+  // Timer effect
+  useEffect(() => {
+    if (!settings.showTimer) return;
+    
+    const interval = setInterval(() => {
+      setElapsedTime(Math.floor((new Date().getTime() - questionStartTime.getTime()) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [questionStartTime, settings.showTimer]);
+
+  const handleSubmitAnswer = (optionsToSubmit?: number[]) => {
+    const optionsToUse = optionsToSubmit || selectedOptions;
     const timeSpent = Math.floor((new Date().getTime() - questionStartTime.getTime()) / 1000);
-    const isCorrect = checkAnswer(currentQuestion, selectedOptions);
+    const isCorrect = checkAnswer(currentQuestion, optionsToUse);
     
     const userAnswer: UserAnswer = {
       questionIndex: currentQuestionIndex,
-      selectedOptions: [...selectedOptions],
+      selectedOptions: [...optionsToUse],
       isCorrect,
       timeSpent
     };
@@ -116,10 +137,19 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
         isAnswered={isAnswered}
       />
 
-      <div className="mt-8 flex justify-center space-x-4">
-        {!isAnswered && selectedOptions.length > 0 && (
+      <div className={`mt-8 flex justify-center space-x-4 ${settings.animations ? 'animate-fade-in' : ''}`}>
+        {settings.showTimer && (
+          <div className="flex items-center text-gray-600 dark:text-gray-300 mr-4">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+          </div>
+        )}
+        
+        {!isAnswered && selectedOptions.length > 0 && !settings.autoSubmit && (
           <button
-            onClick={handleSubmitAnswer}
+            onClick={() => handleSubmitAnswer()}
             className="btn-primary px-8"
           >
             Submit Answer
