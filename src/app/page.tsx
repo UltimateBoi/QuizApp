@@ -1,31 +1,67 @@
 'use client';
 
 import { useState, Suspense, useCallback, useEffect } from 'react';
-import { QuizSession } from '@/types/quiz';
+import { QuizSession, CustomQuiz } from '@/types/quiz';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSettings } from '@/hooks/useSettings';
+import { useCustomQuizzes } from '@/hooks/useCustomQuizzes';
 import Quiz from '@/components/Quiz';
 import Statistics from '@/components/Statistics';
 import SettingsButton from '@/components/SettingsButton';
 import SettingsModal from '@/components/SettingsModal';
 import AnimatedBackground from '@/components/AnimatedBackground';
-import { sampleQuestions } from '@/data/questions';
+import QuizCreator from '@/components/QuizCreator';
+import SavedQuizzesManager from '@/components/SavedQuizzesManager';
 
-type AppState = 'home' | 'quiz' | 'statistics';
+type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes';
 
 function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
   const [quizSessions, setQuizSessions] = useLocalStorage<QuizSession[]>('quiz-sessions', []);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState<CustomQuiz | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<CustomQuiz | null>(null);
   const { settings, updateSettings, resetSettings, isLoaded } = useSettings();
+  const { allQuizzes, createQuiz, updateQuiz, isLoading, error } = useCustomQuizzes();
 
   const handleQuizComplete = useCallback((session: QuizSession) => {
-    setQuizSessions(prev => [...prev, session]);
-  }, [setQuizSessions]);
+    const sessionWithId = {
+      ...session,
+      id: `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      quizId: selectedQuiz?.id || 'unknown',
+      quizName: selectedQuiz?.name || 'Unknown Quiz'
+    };
+    setQuizSessions(prev => [...prev, sessionWithId]);
+  }, [setQuizSessions, selectedQuiz]);
 
   const handleSettingsOpen = useCallback(() => setIsSettingsOpen(true), []);
   const handleSettingsClose = useCallback(() => setIsSettingsOpen(false), []);
+
+  const handleCreateQuiz = useCallback(() => {
+    setEditingQuiz(null);
+    setAppState('createQuiz');
+  }, []);
+
+  const handleEditQuiz = useCallback((quiz: CustomQuiz) => {
+    setEditingQuiz(quiz);
+    setAppState('editQuiz');
+  }, []);
+
+  const handleSelectQuiz = useCallback((quiz: CustomQuiz) => {
+    setSelectedQuiz(quiz);
+    setAppState('quiz');
+  }, []);
+
+  const handleSaveQuiz = useCallback((quizData: any) => {
+    if (editingQuiz && !editingQuiz.isDefault) {
+      updateQuiz(editingQuiz.id, quizData);
+    } else {
+      createQuiz(quizData);
+    }
+    setAppState('home');
+    setEditingQuiz(null);
+  }, [editingQuiz, createQuiz, updateQuiz]);
 
   // Ensure client-side hydration is complete
   useEffect(() => {
@@ -103,20 +139,69 @@ function HomeContent() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* Available Quizzes Section */}
+        {!isLoading && allQuizzes.length > 0 && (
+          <div className={`mb-8 ${settings.animations ? 'animate-fade-in' : ''}`} style={{ animationDelay: '800ms' }}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">Choose a Quiz</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              {allQuizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-gray-900 dark:text-white text-sm">{quiz.name}</h4>
+                    {quiz.isDefault && (
+                      <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3 line-clamp-2">
+                    {quiz.description}
+                  </p>
+                  <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    <span>{quiz.questions.length} questions</span>
+                    <span>{new Date(quiz.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <button
+                    onClick={() => handleSelectQuiz(quiz)}
+                    className="btn-primary w-full py-2 text-sm"
+                  >
+                    Take Quiz
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 justify-center max-w-2xl mx-auto">
           <button
-            onClick={() => setAppState('quiz')}
-            className="btn-primary px-8 py-3 text-lg"
+            onClick={handleCreateQuiz}
+            className="btn-secondary px-6 py-3 text-base"
           >
-            Start Quiz
+            Create Quiz
+          </button>
+          <button
+            onClick={() => setAppState('manageQuizzes')}
+            className="btn-secondary px-6 py-3 text-base"
+          >
+            Manage Quizzes
           </button>
           <button
             onClick={() => setAppState('statistics')}
-            className="btn-secondary px-8 py-3 text-lg"
+            className="btn-secondary px-6 py-3 text-base"
             disabled={!isClient || quizSessions.length === 0}
           >
             View Statistics
           </button>
+          {isLoading && (
+            <div className="flex items-center justify-center py-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading quizzes...</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -143,10 +228,19 @@ function HomeContent() {
               Back to Home
             </button>
           </div>
-          <Quiz 
-            questions={sampleQuestions}
-            onQuizComplete={handleQuizComplete}
-          />
+          {selectedQuiz ? (
+            <Quiz 
+              questions={selectedQuiz.questions}
+              onQuizComplete={handleQuizComplete}
+            />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">No quiz selected</p>
+              <button onClick={() => setAppState('home')} className="btn-primary">
+                Select a Quiz
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -164,6 +258,45 @@ function HomeContent() {
             </button>
           </div>
           <Statistics sessions={quizSessions} />
+        </div>
+      )}
+
+      {appState === 'createQuiz' && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <QuizCreator
+            onSave={handleSaveQuiz}
+            onCancel={() => setAppState('home')}
+          />
+        </div>
+      )}
+
+      {appState === 'editQuiz' && editingQuiz && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <QuizCreator
+            quiz={editingQuiz}
+            onSave={handleSaveQuiz}
+            onCancel={() => setAppState('home')}
+          />
+        </div>
+      )}
+
+      {appState === 'manageQuizzes' && (
+        <div className={settings.animations ? 'animate-slide-in-left' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <SavedQuizzesManager
+            onEditQuiz={handleEditQuiz}
+            onSelectQuiz={handleSelectQuiz}
+          />
         </div>
       )}
 

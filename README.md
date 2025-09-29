@@ -109,7 +109,7 @@ This generates a static export in the `out/` directory suitable for GitHub Pages
 
 ```
 src/
-├── app/                 # Next.js app directory
+├── app/                # Next.js app directory
 │   ├── globals.css     # Global styles
 │   ├── layout.tsx      # Root layout
 │   └── page.tsx        # Home page

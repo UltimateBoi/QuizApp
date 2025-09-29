@@ -80,6 +80,9 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
       const score = calculateScore(questions, [...userAnswers]);
       
       const session: QuizSession = {
+        id: '', // Will be set by the handler
+        quizId: '', // Will be set by the handler
+        quizName: '', // Will be set by the handler
         questions,
         userAnswers: [...userAnswers],
         startTime: quizStartTime,
@@ -109,6 +112,9 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
 
   if (quizComplete) {
     const session: QuizSession = {
+      id: '', // Will be set by the handler
+      quizId: '', // Will be set by the handler
+      quizName: '', // Will be set by the handler
       questions,
       userAnswers,
       startTime: quizStartTime,

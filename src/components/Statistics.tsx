@@ -11,21 +11,39 @@ interface StatisticsProps {
 
 export default function Statistics({ sessions }: StatisticsProps) {
   const [selectedSession, setSelectedSession] = useState<QuizSession | null>(null);
+  const [selectedQuizId, setSelectedQuizId] = useState<string>('all');
 
   if (sessions.length === 0) {
     return (
       <div className="card text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Your Statistics</h2>
-        <p className="text-gray-600">No quiz sessions completed yet. Take your first quiz to see statistics!</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Your Statistics</h2>
+        <p className="text-gray-600 dark:text-gray-400">No quiz sessions completed yet. Take your first quiz to see statistics!</p>
       </div>
     );
   }
 
-  // Calculate statistics
-  const totalQuizzes = sessions.length;
-  const averageScore = Math.round(sessions.reduce((sum, session) => sum + session.score, 0) / totalQuizzes);
-  const bestScore = Math.max(...sessions.map(session => session.score));
-  const totalTimeSpent = sessions.reduce((sum, session) => {
+  // Get unique quizzes from sessions
+  const uniqueQuizzes = Array.from(new Set(sessions.map(s => s.quizId)))
+    .map(quizId => {
+      const session = sessions.find(s => s.quizId === quizId);
+      return {
+        id: quizId,
+        name: session?.quizName || 'Unknown Quiz',
+        sessionCount: sessions.filter(s => s.quizId === quizId).length
+      };
+    })
+    .filter(quiz => quiz.id !== 'unknown');
+
+  // Filter sessions based on selected quiz
+  const filteredSessions = selectedQuizId === 'all' 
+    ? sessions 
+    : sessions.filter(s => s.quizId === selectedQuizId);
+
+  // Calculate statistics for filtered sessions
+  const totalQuizzes = filteredSessions.length;
+  const averageScore = totalQuizzes > 0 ? Math.round(filteredSessions.reduce((sum, session) => sum + session.score, 0) / totalQuizzes) : 0;
+  const bestScore = totalQuizzes > 0 ? Math.max(...filteredSessions.map(session => session.score)) : 0;
+  const totalTimeSpent = filteredSessions.reduce((sum, session) => {
     if (session.endTime && session.startTime) {
       const endTime = typeof session.endTime === 'string' ? new Date(session.endTime) : session.endTime;
       const startTime = typeof session.startTime === 'string' ? new Date(session.startTime) : session.startTime;
@@ -34,20 +52,42 @@ export default function Statistics({ sessions }: StatisticsProps) {
     return sum;
   }, 0);
 
-  const averageTimePerQuestion = Math.round(
-    sessions.reduce((sum, session) => {
+  const averageTimePerQuestion = totalQuizzes > 0 ? Math.round(
+    filteredSessions.reduce((sum, session) => {
       const sessionTime = session.userAnswers.reduce((answerSum, answer) => answerSum + answer.timeSpent, 0);
       return sum + sessionTime / session.totalQuestions;
     }, 0) / totalQuizzes
-  );
+  ) : 0;
 
-  const recentSessions = sessions.slice(-5).reverse();
+  const recentSessions = filteredSessions.slice(-5).reverse();
   const performance = getPerformanceLevel(averageScore);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Your Quiz Statistics</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-0">Your Quiz Statistics</h2>
+          
+          {uniqueQuizzes.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Filter by Quiz:
+              </label>
+              <select
+                value={selectedQuizId}
+                onChange={(e) => setSelectedQuizId(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="all">All Quizzes ({sessions.length})</option>
+                {uniqueQuizzes.map((quiz) => (
+                  <option key={quiz.id} value={quiz.id}>
+                    {quiz.name} ({quiz.sessionCount})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6">
@@ -96,7 +136,7 @@ export default function Statistics({ sessions }: StatisticsProps) {
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                {Math.round((sessions.filter(s => s.score >= 80).length / totalQuizzes) * 100)}%
+                {totalQuizzes > 0 ? Math.round((filteredSessions.filter(s => s.score >= 80).length / totalQuizzes) * 100) : 0}%
               </div>
               <div className="text-gray-700 dark:text-gray-200">Sessions with 80%+ Score</div>
             </div>
@@ -130,10 +170,10 @@ export default function Statistics({ sessions }: StatisticsProps) {
                     </div>
                     <div className="text-left">
                       <div className="font-medium text-gray-900 dark:text-white">
-                        {session.userAnswers.filter(a => a.isCorrect).length}/{session.totalQuestions} correct
+                        {session.quizName || 'Unknown Quiz'}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-300">
-                        {new Date(typeof session.startTime === 'string' ? session.startTime : session.startTime).toLocaleDateString()} • {formatTime(sessionDuration)}
+                        {session.userAnswers.filter(a => a.isCorrect).length}/{session.totalQuestions} correct • {new Date(typeof session.startTime === 'string' ? session.startTime : session.startTime).toLocaleDateString()} • {formatTime(sessionDuration)}
                       </div>
                     </div>
                   </div>

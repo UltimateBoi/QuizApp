@@ -6,6 +6,17 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface CustomQuiz {
+  id: string;
+  name: string;
+  description: string;
+  questions: QuizQuestion[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  isDefault?: boolean;
+  tags?: string[];
+}
+
 export interface UserAnswer {
   questionIndex: number;
   selectedOptions: number[];
@@ -14,6 +25,9 @@ export interface UserAnswer {
 }
 
 export interface QuizSession {
+  id: string;
+  quizId: string;
+  quizName: string;
   questions: QuizQuestion[];
   userAnswers: UserAnswer[];
   startTime: Date | string;
@@ -30,4 +44,11 @@ export interface QuizStatistics {
   averageTimePerQuestion: number;
   topicPerformance: { [topic: string]: number };
   recentSessions: QuizSession[];
+}
+
+export interface QuizCreationData {
+  name: string;
+  description: string;
+  questions: QuizQuestion[];
+  tags?: string[];
 }
