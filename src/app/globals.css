@@ -44,8 +44,9 @@
 }
 
 @layer utilities {
-  /* Page transition animations */
+  /* Page transition animations with initial hidden state */
   .animate-fade-in {
+    opacity: 0;
     animation: fadeIn 0.3s ease-out forwards;
   }
 
@@ -54,22 +55,32 @@
   }
 
   .animate-slide-in-up {
+    opacity: 0;
+    transform: translateY(30px);
     animation: slideInUp 0.5s ease-out forwards;
   }
 
   .animate-slide-in-down {
+    opacity: 0;
+    transform: translateY(-30px);
     animation: slideInDown 0.5s ease-out forwards;
   }
 
   .animate-slide-in-left {
+    opacity: 0;
+    transform: translateX(-30px);
     animation: slideInLeft 0.5s ease-out forwards;
   }
 
   .animate-slide-in-right {
+    opacity: 0;
+    transform: translateX(30px);
     animation: slideInRight 0.5s ease-out forwards;
   }
 
   .animate-scale-in {
+    opacity: 0;
+    transform: scale(0.9);
     animation: scaleIn 0.3s ease-out forwards;
   }
 
@@ -78,6 +89,8 @@
   }
 
   .animate-bounce-in {
+    opacity: 0;
+    transform: scale(0.3);
     animation: bounceIn 0.6s ease-out forwards;
   }
 

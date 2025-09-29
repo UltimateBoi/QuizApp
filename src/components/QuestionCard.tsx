@@ -35,7 +35,7 @@ export default function QuestionCard({
             ></div>
           </div>
         </div>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 leading-relaxed">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white leading-relaxed">
           {question.question}
         </h2>
       </div>
@@ -59,7 +59,7 @@ export default function QuestionCard({
             if (isSelected) {
               optionClasses += "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 ring-2 ring-blue-200 dark:ring-blue-800 scale-105";
             } else {
-              optionClasses += "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-blue-200 dark:hover:border-blue-700";
+              optionClasses += "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-blue-200 dark:hover:border-blue-700";
             }
           }
 

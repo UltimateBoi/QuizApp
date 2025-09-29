@@ -39,21 +39,21 @@ export default function ResultsScreen({ session, onRestartQuiz }: ResultsScreenP
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-left" style={{ animationDelay: '400ms' }}>
-            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{correctAnswers}</div>
-            <div className="text-gray-600 dark:text-gray-300">Correct Answers</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">out of {questions.length}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{correctAnswers}</div>
+            <div className="text-gray-700 dark:text-gray-200">Correct Answers</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">out of {questions.length}</div>
           </div>
           
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-up" style={{ animationDelay: '500ms' }}>
-            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{formatTime(totalTime)}</div>
-            <div className="text-gray-600 dark:text-gray-300">Total Time</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">minutes:seconds</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{formatTime(totalTime)}</div>
+            <div className="text-gray-700 dark:text-gray-200">Total Time</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">minutes:seconds</div>
           </div>
           
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-slide-in-right" style={{ animationDelay: '600ms' }}>
-            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{formatTime(averageTimePerQuestion)}</div>
-            <div className="text-gray-600">Avg per Question</div>
-            <div className="text-sm text-gray-500">minutes:seconds</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{formatTime(averageTimePerQuestion)}</div>
+            <div className="text-gray-700 dark:text-gray-200">Avg per Question</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">minutes:seconds</div>
           </div>
         </div>
 
