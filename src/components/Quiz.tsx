@@ -162,15 +162,6 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
             {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
           </div>
         )}
-        
-        {!isAnswered && selectedOptions.length > 0 && !settings.autoSubmit && (
-          <button
-            onClick={() => handleSubmitAnswer()}
-            className="btn-primary px-8"
-          >
-            Submit Answer
-          </button>
-        )}
 
         {showExplanation && (
           <button
