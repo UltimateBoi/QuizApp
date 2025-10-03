@@ -30,20 +30,20 @@ export default function QuestionCard({
   const hasSelectedAnswers = selectedOptions.length > 0;
   const canSubmit = hasSelectedAnswers && !isAnswered;
   return (
-    <div className="card max-w-4xl mx-auto animate-slide-in-up">
+    <div className="card max-w-4xl mx-auto animate-slide-in-up shadow-2xl border-2 border-gray-200 dark:border-gray-700">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 tracking-wide">
             Question {questionNumber} of {totalQuestions}
           </span>
-          <div className="w-32 bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
+          <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden shadow-inner">
             <div 
-              className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out shadow-sm"
               style={{ width: `${(questionNumber / totalQuestions) * 100}%` }}
             ></div>
           </div>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white leading-relaxed">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-relaxed">
           {question.question}
         </h2>
       </div>
@@ -53,21 +53,21 @@ export default function QuestionCard({
           const isSelected = selectedOptions.includes(index);
           const isCorrect = question.answer.includes(index);
           
-          let optionClasses = "w-full p-4 text-left rounded-lg border transition-all duration-300 hover:scale-102 transform ";
+          let optionClasses = "w-full p-4 text-left rounded-lg border-2 transition-all duration-300 hover:scale-[1.02] transform ";
           
           if (showExplanation) {
             if (isCorrect) {
-              optionClasses += "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 animate-bounce-in";
+              optionClasses += "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/20 border-green-400 dark:border-green-700 text-green-900 dark:text-green-100 shadow-lg animate-bounce-in";
             } else if (isSelected && !isCorrect) {
-              optionClasses += "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 animate-scale-in";
+              optionClasses += "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-900/20 border-red-400 dark:border-red-700 text-red-900 dark:text-red-100 shadow-lg animate-scale-in";
             } else {
-              optionClasses += "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400";
+              optionClasses += "bg-gray-50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400";
             }
           } else {
             if (isSelected) {
-              optionClasses += "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 ring-2 ring-blue-200 dark:ring-blue-800 scale-105";
+              optionClasses += "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100 ring-2 ring-blue-300 dark:ring-blue-700 scale-[1.02] shadow-lg";
             } else {
-              optionClasses += "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-blue-200 dark:hover:border-blue-700";
+              optionClasses += "bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md";
             }
           }
 

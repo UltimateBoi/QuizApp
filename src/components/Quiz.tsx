@@ -44,17 +44,7 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
       
       setSelectedOptions(newSelection);
       
-      // Auto-submit for multi-select if all correct answers are selected
-      if (settings.autoSubmit && newSelection.length > 0) {
-        // Check if the selected answers match exactly the correct answers
-        const sortedSelected = [...newSelection].sort();
-        const sortedCorrect = [...currentQuestion.answer].sort();
-        
-        if (sortedSelected.length === sortedCorrect.length && 
-            sortedSelected.every((val, index) => val === sortedCorrect[index])) {
-          setTimeout(() => handleSubmitAnswer(newSelection), 500);
-        }
-      }
+      // No auto-submit for multi-select questions
     }
   };
 
@@ -171,15 +161,6 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
             </svg>
             {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
           </div>
-        )}
-        
-        {!isAnswered && selectedOptions.length > 0 && !settings.autoSubmit && (
-          <button
-            onClick={() => handleSubmitAnswer()}
-            className="btn-primary px-8"
-          >
-            Submit Answer
-          </button>
         )}
 
         {showExplanation && (

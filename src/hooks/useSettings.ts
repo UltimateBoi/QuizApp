@@ -26,11 +26,23 @@ export function useSettings() {
     if (isLoaded) {
       const root = document.documentElement;
       
+      const applyTheme = () => {
+        if (settings.theme === 'system') {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          root.classList.toggle('dark', prefersDark);
+        } else {
+          root.classList.toggle('dark', settings.theme === 'dark');
+        }
+      };
+
+      applyTheme();
+
+      // Listen for system theme changes when using system theme
       if (settings.theme === 'system') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.toggle('dark', prefersDark);
-      } else {
-        root.classList.toggle('dark', settings.theme === 'dark');
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = () => applyTheme();
+        mediaQuery.addEventListener('change', handler);
+        return () => mediaQuery.removeEventListener('change', handler);
       }
 
       // Apply reduced motion
