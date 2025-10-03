@@ -1,3 +1,5 @@
+[![Deploy to GitHub Pages](https://github.com/UltimateBoi/QuizApp/actions/workflows/deploy.yml/badge.svg)](https://github.com/UltimateBoi/QuizApp/actions/workflows/deploy.yml)
+
 # QuizApp
 
 A comprehensive Next.js quiz application built with TypeScript and TailwindCSS that provides interactive learning with detailed statistics and smart analytics.
