@@ -12,8 +12,9 @@ import SettingsModal from '@/components/SettingsModal';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import QuizCreator from '@/components/QuizCreator';
 import SavedQuizzesManager from '@/components/SavedQuizzesManager';
+import BulkQuizGenerator from '@/components/BulkQuizGenerator';
 
-type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes';
+type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate';
 
 function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
@@ -62,6 +63,13 @@ function HomeContent() {
     setAppState('home');
     setEditingQuiz(null);
   }, [editingQuiz, createQuiz, updateQuiz]);
+
+  const handleSaveBulkQuizzes = useCallback((quizzes: any[]) => {
+    quizzes.forEach(quizData => {
+      createQuiz(quizData);
+    });
+    setAppState('home');
+  }, [createQuiz]);
 
   // Ensure client-side hydration is complete
   useEffect(() => {
@@ -184,6 +192,12 @@ function HomeContent() {
             Create Quiz
           </button>
           <button
+            onClick={() => setAppState('bulkGenerate')}
+            className="btn-secondary px-6 py-3 text-base"
+          >
+            Bulk Generate
+          </button>
+          <button
             onClick={() => setAppState('manageQuizzes')}
             className="btn-secondary px-6 py-3 text-base"
           >
@@ -296,6 +310,26 @@ function HomeContent() {
           <SavedQuizzesManager
             onEditQuiz={handleEditQuiz}
             onSelectQuiz={handleSelectQuiz}
+          />
+        </div>
+      )}
+
+      {appState === 'bulkGenerate' && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <BulkQuizGenerator
+            onSave={handleSaveBulkQuizzes}
+            onCancel={() => setAppState('home')}
           />
         </div>
       )}
