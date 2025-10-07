@@ -70,5 +70,6 @@ export function useFlashCards() {
     createDeck,
     updateDeck,
     deleteDeck,
+    setFlashCardDecks,
   };
 }
