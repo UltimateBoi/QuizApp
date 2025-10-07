@@ -24,6 +24,7 @@ import FlashCardStudy from '@/components/FlashCardStudy';
 import QuizToFlashCards from '@/components/QuizToFlashCards';
 import AuthButton from '@/components/AuthButton';
 import SyncDialog from '@/components/SyncDialog';
+import AdBlockerWarning from '@/components/AdBlockerWarning';
 
 type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards';
 
@@ -40,6 +41,12 @@ function HomeContent() {
   const { allQuizzes, createQuiz, updateQuiz, isLoading, error, setCustomQuizzes } = useCustomQuizzes();
   const { flashCardDecks, createDeck, updateDeck, deleteDeck, setFlashCardDecks } = useFlashCards();
   const { user } = useAuth();
+
+  // Debug auth state
+  console.log('Auth Debug:', {
+    user: user,
+    uid: user?.uid
+  });
 
   // Sync manager for coordinated sync on login
   const {
@@ -160,6 +167,8 @@ function HomeContent() {
             Track your progress, review explanations, and improve your skills with detailed statistics.
           </p>
         </div>
+
+        <AdBlockerWarning />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className={`bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800 hover:scale-105 transition-all duration-300 ${settings.animations ? 'animate-slide-in-left' : ''}`} style={{ animationDelay: '300ms' }}>

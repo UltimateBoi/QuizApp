@@ -24,7 +24,12 @@ export function useFirebaseSync<T extends { id: string }>(
 
   // Sync local data to Firebase when user is authenticated
   const syncToFirebase = useCallback(async () => {
-    if (!user || !db || !isConfigured || localData.length === 0 || !enabled) return;
+    if (!user) {
+      console.error('Cannot sync: User not authenticated');
+      return;
+    }
+
+    if (!db || !isConfigured || localData.length === 0 || !enabled) return;
 
     setSyncing(true);
     try {
@@ -49,7 +54,12 @@ export function useFirebaseSync<T extends { id: string }>(
 
   // Load data from Firebase when user signs in
   const loadFromFirebase = useCallback(async () => {
-    if (!user || !db || !isConfigured || !enabled) return;
+    if (!user) {
+      console.error('Cannot sync: User not authenticated');
+      return;
+    }
+
+    if (!db || !isConfigured || !enabled) return;
 
     setSyncing(true);
     try {

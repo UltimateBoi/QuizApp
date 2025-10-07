@@ -137,7 +137,17 @@ export function useSyncManager({
 
   // Upload local data to Firebase
   const uploadToCloud = async () => {
-    if (!user || !db) return;
+    if (!user) {
+      console.error('Cannot sync: User not authenticated');
+      throw new Error('User must be signed in to sync data');
+    }
+    
+    if (!db || !isConfigured) {
+      console.error('Cannot sync: Firebase not configured');
+      throw new Error('Firebase not configured');
+    }
+
+    console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -188,7 +198,17 @@ export function useSyncManager({
 
   // Download cloud data
   const downloadFromCloud = async () => {
-    if (!user || !db) return;
+    if (!user) {
+      console.error('Cannot sync: User not authenticated');
+      throw new Error('User must be signed in to sync data');
+    }
+    
+    if (!db || !isConfigured) {
+      console.error('Cannot sync: Firebase not configured');
+      throw new Error('Firebase not configured');
+    }
+
+    console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -242,7 +262,17 @@ export function useSyncManager({
 
   // Merge local and cloud data
   const mergeData = async () => {
-    if (!user || !db) return;
+    if (!user) {
+      console.error('Cannot sync: User not authenticated');
+      throw new Error('User must be signed in to sync data');
+    }
+    
+    if (!db || !isConfigured) {
+      console.error('Cannot sync: Firebase not configured');
+      throw new Error('Firebase not configured');
+    }
+
+    console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -380,9 +410,16 @@ export function useSyncManager({
 
       setShowSyncDialog(false);
       setSyncComplete(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sync action failed:', error);
-      alert('Sync failed. Please try again.');
+      
+      if (error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
+        alert('Sync failed: Please disable your ad blocker for this site and try again. Common ad blockers: uBlock Origin, AdBlock Plus, Brave Shield');
+      } else if (error.code === 'permission-denied') {
+        alert('Please sign in to sync your data.');
+      } else {
+        alert('Sync failed: ' + (error.message || 'Unknown error'));
+      }
     }
   };
 

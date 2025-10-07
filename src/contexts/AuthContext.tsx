@@ -16,6 +16,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   isConfigured: boolean;
+  isFirebaseReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signOut: async () => {},
   isConfigured: false,
+  isFirebaseReady: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     isConfigured: !!isFirebaseConfigured,
+    isFirebaseReady: !!isFirebaseConfigured && !loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
