@@ -1,8 +1,9 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Firebase configuration - these are public identifiers
+// Firebase configuration
+// These are public identifiers and are safe to include in client-side code
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
@@ -31,31 +32,10 @@ if (typeof window !== 'undefined' && isFirebaseConfigured) {
     
     auth = getAuth(app);
     db = getFirestore(app);
-    
-    // Enable persistence for offline support
-    if (db) {
-      import('firebase/firestore').then(({ enableNetwork, disableNetwork }) => {
-        // Enable network by default
-        enableNetwork(db!).catch(() => {
-          console.warn('Failed to enable Firebase network');
-        });
-      });
-    }
-    
   } catch (error) {
     console.warn('Firebase initialization failed:', error);
     // Firebase features will be disabled
   }
 }
-
-// Export configuration check function
-export const checkFirebaseConfig = (): boolean => {
-  return isFirebaseConfigured;
-};
-
-// Export auth state helper
-export const isAuthReady = (): boolean => {
-  return auth !== undefined && isFirebaseConfigured;
-};
 
 export { auth, db, isFirebaseConfigured };
