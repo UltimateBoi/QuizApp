@@ -52,3 +52,24 @@ export interface QuizCreationData {
   questions: QuizQuestion[];
   tags?: string[];
 }
+
+export interface FlashCard {
+  id: string;
+  front: string;
+  back: string;
+  deckId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  lastReviewed?: Date | string;
+}
+
+export interface FlashCardDeck {
+  id: string;
+  name: string;
+  description: string;
+  cards: FlashCard[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  tags?: string[];
+}
