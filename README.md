@@ -63,6 +63,34 @@ Every push to the main branch triggers an automated deployment via GitHub Action
 - Deploy to GitHub Pages
 ```
 
+### Configuring Firebase for GitHub Pages Deployment
+
+To use Firebase authentication and cloud sync on your deployed GitHub Pages site, you need to configure Firebase secrets in your GitHub repository:
+
+1. **Add Firebase Configuration to GitHub Secrets:**
+   - Go to your repository on GitHub
+   - Navigate to `Settings` → `Secrets and variables` → `Actions`
+   - Click `New repository secret` and add the following secrets (get these values from your Firebase Console):
+     - `FIREBASE_API_KEY`
+     - `FIREBASE_AUTH_DOMAIN`
+     - `FIREBASE_PROJECT_ID`
+     - `FIREBASE_STORAGE_BUCKET`
+     - `FIREBASE_MESSAGING_SENDER_ID`
+     - `FIREBASE_APP_ID`
+
+2. **How it Works:**
+   - The GitHub Actions workflow automatically injects these secrets as environment variables during the build process
+   - The secrets are used to configure Firebase but are NOT committed to your repository
+   - Once built, the Firebase config will be in the compiled JavaScript (this is expected and secure)
+   - Security is enforced through Firebase Security Rules, not by hiding the API keys
+
+3. **Configure Firebase Security (Important!):**
+   - In Firebase Console, set up Security Rules for Firestore
+   - Add your GitHub Pages domain to authorized domains in Firebase Authentication settings
+   - Enable App Check for additional security (recommended for production)
+
+**Note:** Firebase client-side API keys are designed to be public. The real security comes from properly configured Firebase Security Rules and authorized domains, not from hiding the keys.
+
 ## Quiz Data Format
 
 The application supports JSON quiz data in the following format:
@@ -117,11 +145,12 @@ npm install
    - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
    - Enable Google Authentication in Firebase Console
    - Create a Firestore database
-   - Copy `.env.local.example` to `.env.local` and add your Firebase configuration:
+   - **For local development:** Copy `.env.local.example` to `.env.local` and add your Firebase configuration:
    ```bash
    cp .env.local.example .env.local
    ```
    - Edit `.env.local` with your Firebase credentials
+   - **For GitHub Pages deployment:** Add your Firebase credentials to GitHub Secrets (see "Configuring Firebase for GitHub Pages Deployment" section above)
 
 4. Run the development server:
 ```bash
