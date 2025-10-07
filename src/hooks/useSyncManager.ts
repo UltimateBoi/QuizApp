@@ -92,6 +92,13 @@ export function useSyncManager({
     const checkSyncStatus = async () => {
       if (!user || !db || !isConfigured || syncComplete) return;
 
+      console.log('🔍 Checking sync status for user:', {
+        uid: user.uid,
+        email: user.email,
+        isConfigured,
+        syncComplete
+      });
+
       try {
         // Check if user metadata exists
         const userDocRef = doc(db, `users/${user.uid}`);
@@ -155,24 +162,32 @@ export function useSyncManager({
 
       // Upload quizzes (excluding default)
       const customQuizzes = localQuizzes.filter(q => !q.isDefault);
+      console.log('📤 Uploading', customQuizzes.length, 'quizzes');
+      
       for (const quiz of customQuizzes) {
         const quizRef = doc(db, `users/${user.uid}/quizzes/${quiz.id}`);
         batch.set(quizRef, { ...quiz, updatedAt: Timestamp.now() });
       }
 
       // Upload sessions
+      console.log('📤 Uploading', localSessions.length, 'sessions');
+      
       for (const session of localSessions) {
         const sessionRef = doc(db, `users/${user.uid}/sessions/${session.id}`);
         batch.set(sessionRef, { ...session, updatedAt: Timestamp.now() });
       }
 
       // Upload flashcards
+      console.log('📤 Uploading', localFlashcards.length, 'flashcard decks');
+      
       for (const deck of localFlashcards) {
         const deckRef = doc(db, `users/${user.uid}/flashcards/${deck.id}`);
         batch.set(deckRef, { ...deck, updatedAt: Timestamp.now() });
       }
 
       await batch.commit();
+
+      console.log('✅ Batch write successful');
 
       // Upload settings separately
       if (localSettings && Object.keys(localSettings).length > 0) {
@@ -187,6 +202,8 @@ export function useSyncManager({
         lastSync: Timestamp.now(),
         createdAt: Timestamp.now(),
       }, { merge: true });
+
+      console.log('✅ Upload to cloud completed successfully');
 
     } catch (error) {
       console.error('Error uploading to cloud:', error);
@@ -386,6 +403,8 @@ export function useSyncManager({
   // Handle sync action
   const handleSyncAction = async (action: SyncAction) => {
     try {
+      console.log('🔄 Sync action requested:', action, 'User:', user?.uid);
+      
       if (action === 'cancel') {
         // User skipped sync
         if (isNewUser && user && db) {
@@ -410,15 +429,24 @@ export function useSyncManager({
 
       setShowSyncDialog(false);
       setSyncComplete(true);
+      console.log('✅ Sync completed successfully');
     } catch (error: any) {
       console.error('Sync action failed:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        name: error.name,
+        user: user?.uid
+      });
       
       if (error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
-        alert('Sync failed: Please disable your ad blocker for this site and try again. Common ad blockers: uBlock Origin, AdBlock Plus, Brave Shield');
+        alert('⚠️ Sync failed: Please disable your ad blocker for this site and try again.\n\nCommon ad blockers: uBlock Origin, AdBlock Plus, Brave Shield\n\nTry opening in Incognito/Private mode as a test.');
       } else if (error.code === 'permission-denied') {
-        alert('Please sign in to sync your data.');
+        alert('⚠️ Permission denied: Please make sure you are signed in.\n\nIf you are signed in, there may be a security rule issue. Check the console for details.');
+      } else if (error.message?.includes('not authenticated')) {
+        alert('⚠️ Not authenticated: Please sign in first before syncing data.');
       } else {
-        alert('Sync failed: ' + (error.message || 'Unknown error'));
+        alert('❌ Sync failed: ' + (error.message || 'Unknown error') + '\n\nCheck the browser console for more details.');
       }
     }
   };

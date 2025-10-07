@@ -40,13 +40,19 @@ function HomeContent() {
   const { settings, updateSettings, resetSettings, setSettings, isLoaded } = useSettings();
   const { allQuizzes, createQuiz, updateQuiz, isLoading, error, setCustomQuizzes } = useCustomQuizzes();
   const { flashCardDecks, createDeck, updateDeck, deleteDeck, setFlashCardDecks } = useFlashCards();
-  const { user } = useAuth();
+  const { user, loading, isFirebaseReady } = useAuth();
 
   // Debug auth state
-  console.log('Auth Debug:', {
-    user: user,
-    uid: user?.uid
-  });
+  useEffect(() => {
+    console.log('🔐 Auth Debug:', {
+      user: user,
+      uid: user?.uid,
+      email: user?.email,
+      loading: loading,
+      isFirebaseReady: isFirebaseReady,
+      isAuthenticated: !!user
+    });
+  }, [user, loading, isFirebaseReady]);
 
   // Sync manager for coordinated sync on login
   const {
