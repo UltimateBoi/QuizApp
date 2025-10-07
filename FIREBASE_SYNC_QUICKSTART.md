@@ -46,6 +46,8 @@ To enable Firebase sync, you'll need:
    - Google Authentication
 
 3. **Add Configuration**
+
+   **For Local Development:**
    - Copy Firebase config values
    - Add to `.env.local`:
    ```env
@@ -56,6 +58,19 @@ To enable Firebase sync, you'll need:
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    ```
+
+   **For GitHub Pages Deployment:**
+   - Go to your repository on GitHub
+   - Navigate to `Settings` → `Secrets and variables` → `Actions`
+   - Click `New repository secret` and add the following secrets:
+     - `FIREBASE_API_KEY`
+     - `FIREBASE_AUTH_DOMAIN`
+     - `FIREBASE_PROJECT_ID`
+     - `FIREBASE_STORAGE_BUCKET`
+     - `FIREBASE_MESSAGING_SENDER_ID`
+     - `FIREBASE_APP_ID`
+   - The GitHub Actions workflow (`.github/workflows/deploy.yml`) will automatically use these secrets during build
+   - Your deployed GitHub Pages site will have Firebase sync fully enabled!
 
 4. **Configure Security Rules**
    ```javascript
@@ -68,6 +83,11 @@ To enable Firebase sync, you'll need:
      }
    }
    ```
+
+5. **Add Authorized Domain (Important!)**
+   - In Firebase Console, go to Authentication → Settings → Authorized domains
+   - Add your GitHub Pages domain: `<username>.github.io`
+   - This allows authentication to work on your deployed site
 
 ## Features
 

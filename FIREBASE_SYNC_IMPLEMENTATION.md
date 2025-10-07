@@ -145,8 +145,12 @@ When merging data:
 1. Firebase project with Firestore enabled
 2. Google Authentication enabled
 3. Firestore security rules configured
+4. Authorized domain configured in Firebase
 
 ### Environment Variables
+
+**For Local Development:**
+Create a `.env.local` file with:
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
@@ -155,6 +159,19 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...
 ```
+
+**For GitHub Pages Deployment:**
+1. Go to repository `Settings` → `Secrets and variables` → `Actions`
+2. Add the following repository secrets:
+   - `FIREBASE_API_KEY`
+   - `FIREBASE_AUTH_DOMAIN`
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_STORAGE_BUCKET`
+   - `FIREBASE_MESSAGING_SENDER_ID`
+   - `FIREBASE_APP_ID`
+3. The deployment workflow (`.github/workflows/deploy.yml`) automatically uses these secrets
+4. Secrets are injected as environment variables during the build process
+5. The built site will have Firebase fully configured and functional
 
 ### Firestore Security Rules Example
 ```javascript
@@ -167,6 +184,13 @@ service cloud.firestore {
   }
 }
 ```
+
+### Firebase Authorized Domains
+Add your deployment domain to Firebase Console:
+- Local: `localhost` (usually added by default)
+- GitHub Pages: `<username>.github.io`
+
+Go to Firebase Console → Authentication → Settings → Authorized domains
 
 ## Error Handling
 
