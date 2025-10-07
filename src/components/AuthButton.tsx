@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
 export default function AuthButton() {
-  const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, signInWithGoogle, signOut, isConfigured } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
   if (loading) {
@@ -19,7 +19,9 @@ export default function AuthButton() {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+        disabled={!isConfigured}
+        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        title={!isConfigured ? 'Authentication not configured. Add Firebase credentials to enable.' : 'Sign in with Google'}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path

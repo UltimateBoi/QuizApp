@@ -7,11 +7,7 @@ import {
   collection,
   doc,
   setDoc,
-  getDoc,
   getDocs,
-  deleteDoc,
-  query,
-  where,
   onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
@@ -21,13 +17,13 @@ export function useFirebaseSync<T extends { id: string }>(
   localData: T[],
   setLocalData: (data: T[]) => void
 ) {
-  const { user } = useAuth();
+  const { user, isConfigured } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
   // Sync local data to Firebase when user is authenticated
   const syncToFirebase = useCallback(async () => {
-    if (!user || !db || localData.length === 0) return;
+    if (!user || !db || !isConfigured || localData.length === 0) return;
 
     setSyncing(true);
     try {
@@ -48,11 +44,11 @@ export function useFirebaseSync<T extends { id: string }>(
       setSyncing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, localData, collectionName]);
+  }, [user, isConfigured, localData, collectionName]);
 
   // Load data from Firebase when user signs in
   const loadFromFirebase = useCallback(async () => {
-    if (!user || !db) return;
+    if (!user || !db || !isConfigured) return;
 
     setSyncing(true);
     try {
@@ -81,11 +77,11 @@ export function useFirebaseSync<T extends { id: string }>(
       setSyncing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, collectionName, localData, setLocalData]);
+  }, [user, isConfigured, collectionName, localData, setLocalData]);
 
   // Real-time sync listener
   useEffect(() => {
-    if (!user || !db) return;
+    if (!user || !db || !isConfigured) return;
 
     const userCollectionRef = collection(db, `users/${user.uid}/${collectionName}`);
     const unsubscribe = onSnapshot(userCollectionRef, (snapshot) => {
@@ -107,25 +103,25 @@ export function useFirebaseSync<T extends { id: string }>(
 
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, collectionName]);
+  }, [user, isConfigured, collectionName]);
 
   // Initial sync when user logs in
   useEffect(() => {
-    if (user && !lastSync) {
+    if (user && isConfigured && !lastSync) {
       loadFromFirebase();
     }
-  }, [user, lastSync, loadFromFirebase]);
+  }, [user, isConfigured, lastSync, loadFromFirebase]);
 
   // Auto-sync when local data changes
   useEffect(() => {
-    if (user && localData.length > 0 && lastSync) {
+    if (user && isConfigured && localData.length > 0 && lastSync) {
       const timeoutId = setTimeout(() => {
         syncToFirebase();
       }, 2000); // Debounce syncing
 
       return () => clearTimeout(timeoutId);
     }
-  }, [user, localData, lastSync, syncToFirebase]);
+  }, [user, isConfigured, localData, lastSync, syncToFirebase]);
 
   return { syncing, lastSync, syncToFirebase, loadFromFirebase };
 }

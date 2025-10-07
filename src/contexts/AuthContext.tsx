@@ -8,13 +8,14 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  isConfigured: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => {},
   signOut: async () => {},
+  isConfigured: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -31,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !auth) {
+    if (typeof window === 'undefined' || !auth || !isFirebaseConfigured) {
       setLoading(false);
       return;
     }
@@ -45,8 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    if (!auth) {
-      console.error('Firebase auth not initialized');
+    if (!auth || !isFirebaseConfigured) {
+      console.error('Firebase is not configured. Please add Firebase credentials to .env.local');
+      alert('Authentication is not configured. Please contact the administrator.');
       return;
     }
 
@@ -60,8 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    if (!auth) {
-      console.error('Firebase auth not initialized');
+    if (!auth || !isFirebaseConfigured) {
+      console.error('Firebase is not configured');
       return;
     }
 
@@ -78,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGoogle,
     signOut,
+    isConfigured: !!isFirebaseConfigured,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -13,21 +13,29 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
 
-// Initialize Firebase only on client side
-if (typeof window !== 'undefined') {
-  // Check if Firebase has already been initialized
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
+// Check if Firebase is properly configured
+const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+// Initialize Firebase only on client side and if configured
+if (typeof window !== 'undefined' && isFirebaseConfigured) {
+  try {
+    // Check if Firebase has already been initialized
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+    // Firebase features will be disabled
   }
-  
-  auth = getAuth(app);
-  db = getFirestore(app);
 }
 
-export { auth, db };
+export { auth, db, isFirebaseConfigured };
