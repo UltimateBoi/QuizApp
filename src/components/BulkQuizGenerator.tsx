@@ -10,11 +10,32 @@ interface BulkQuizGeneratorProps {
 
 export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGeneratorProps) {
   const [specification, setSpecification] = useState('');
+  const [context, setContext] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
   const [apiKey, setApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedQuizzes, setGeneratedQuizzes] = useState<QuizCreationData[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setFileContent(content);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setUploadedFile(null);
+    setFileContent('');
+  };
 
   const handleGenerate = async () => {
     if (!specification.trim()) {
@@ -43,6 +64,10 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
               text: `Generate multiple quizzes for the following subject/specification. Create separate quizzes for each major topic, with each quiz having a unique topic number, title, and 5-10 questions.
 
 Specification: ${specification}
+
+${context ? `Additional Context/Instructions: ${context}` : ''}
+
+${fileContent ? `Reference Material/Content:\n${fileContent}\n` : ''}
 
 Return ONLY a JSON array with the following structure (no markdown formatting, no code blocks):
 [
@@ -275,6 +300,108 @@ Important:
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Be specific about the topics you want covered. The AI will create multiple quizzes, one for each major topic.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Additional Context (Optional)
+          </label>
+          <textarea
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="Provide additional instructions or context. For example: 'Generate 10 questions for each topic', 'Focus on practical applications', 'Include beginner-friendly explanations'"
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Add specific instructions like number of questions per quiz, difficulty level, or any special requirements.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Reference Material (Optional)
+          </label>
+          {!uploadedFile ? (
+            <div>
+              <input
+                type="file"
+                id="file-upload"
+                accept=".txt,.md,.pdf,.doc,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-white dark:bg-gray-800"
+              >
+                <div className="text-center">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 48 48"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Click to upload a file or drag and drop
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    TXT, MD, PDF, DOC up to 10MB
+                  </p>
+                </div>
+              </label>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+              <div className="flex items-center space-x-3">
+                <svg
+                  className="w-8 h-8 text-blue-500 dark:text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {uploadedFile.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {(uploadedFile.size / 1024).toFixed(2)} KB
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRemoveFile}
+                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant questions.
           </p>
         </div>
 
