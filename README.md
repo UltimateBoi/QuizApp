@@ -13,7 +13,27 @@ A comprehensive Next.js quiz application built with TypeScript and TailwindCSS t
 - **💡 Smart Explanations**: Learn from detailed explanations for each question to deepen your understanding
 - **⏱️ Time Tracking**: Monitor your response times and optimize your test-taking strategies
 - **📈 Statistics Dashboard**: View comprehensive statistics including scores, timing, and performance trends
-- **💾 Local Storage**: Your quiz history is saved locally and persists between sessions
+- **🔐 Google Sign-In**: Sign in with your Google account to sync your data across multiple devices
+- **☁️ Cloud Sync**: Automatic synchronization of quizzes, sessions, and flashcards with Firebase
+- **🗂️ Flash Cards**: Create and study flash cards to reinforce learning
+- **🔄 Quiz to Flash Cards**: Convert any quiz into flash cards automatically
+- **💾 Local Storage**: Your data is saved locally and syncs when signed in
+
+## New Features
+
+### Authentication & Cloud Sync
+Sign in with your Google account to:
+- Sync quizzes across all your devices
+- Access your quiz history anywhere
+- Keep your flash cards synchronized
+- Never lose your progress
+
+### Flash Cards
+- Create custom flash card decks
+- Study with an interactive flip card interface
+- Convert quizzes to flash cards automatically
+- Organize cards by topic and difficulty
+- Track your study progress
 
 ## Deployment
 
@@ -78,6 +98,7 @@ The application supports JSON quiz data in the following format:
 
 - Node.js 18+ 
 - npm or yarn
+- (Optional) Firebase account for authentication and cloud sync
 
 ### Installation
 
@@ -92,12 +113,22 @@ cd QuizApp
 npm install
 ```
 
-3. Run the development server:
+3. (Optional) Configure Firebase for authentication and cloud sync:
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Google Authentication in Firebase Console
+   - Create a Firestore database
+   - Copy `.env.local.example` to `.env.local` and add your Firebase configuration:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   - Edit `.env.local` with your Firebase credentials
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Build for Production
 
@@ -113,17 +144,29 @@ This generates a static export in the `out/` directory suitable for GitHub Pages
 src/
 ├── app/                # Next.js app directory
 │   ├── globals.css     # Global styles
-│   ├── layout.tsx      # Root layout
-│   └── page.tsx        # Home page
+│   ├── layout.tsx      # Root layout with AuthProvider
+│   └── page.tsx        # Home page with quiz and flashcard logic
 ├── components/         # React components
 │   ├── QuestionCard.tsx
 │   ├── Quiz.tsx
 │   ├── ResultsScreen.tsx
-│   └── Statistics.tsx
+│   ├── Statistics.tsx
+│   ├── FlashCardView.tsx
+│   ├── FlashCardCreator.tsx
+│   ├── FlashCardManager.tsx
+│   ├── FlashCardStudy.tsx
+│   ├── QuizToFlashCards.tsx
+│   └── AuthButton.tsx
+├── contexts/           # React contexts
+│   └── AuthContext.tsx # Authentication context
 ├── data/              # Quiz data
 │   └── questions.ts
 ├── hooks/             # Custom React hooks
-│   └── useLocalStorage.ts
+│   ├── useLocalStorage.ts
+│   ├── useFlashCards.ts
+│   └── useFirebaseSync.ts
+├── lib/               # Third-party library configurations
+│   └── firebase.ts    # Firebase configuration
 ├── types/             # TypeScript type definitions
 │   └── quiz.ts
 └── utils/             # Utility functions
@@ -136,7 +179,9 @@ src/
 - **TypeScript**: Type-safe JavaScript
 - **TailwindCSS**: Utility-first CSS framework
 - **React Hooks**: State management and side effects
-- **Local Storage**: Client-side data persistence
+- **Firebase**: Authentication and real-time database
+- **Google Authentication**: Secure sign-in with Google
+- **Local Storage**: Client-side data persistence with cloud sync
 - **GitHub Pages**: Static site hosting with automated deployment
 
 ## Features in Detail

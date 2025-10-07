@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, Suspense, useCallback, useEffect } from 'react';
-import { QuizSession, CustomQuiz } from '@/types/quiz';
+import { QuizSession, CustomQuiz, FlashCardDeck } from '@/types/quiz';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSettings } from '@/hooks/useSettings';
 import { useCustomQuizzes } from '@/hooks/useCustomQuizzes';
+import { useFlashCards } from '@/hooks/useFlashCards';
+import { useFirebaseSync } from '@/hooks/useFirebaseSync';
+import { useAuth } from '@/contexts/AuthContext';
 import Quiz from '@/components/Quiz';
 import Statistics from '@/components/Statistics';
 import SettingsButton from '@/components/SettingsButton';
@@ -13,8 +16,13 @@ import AnimatedBackground from '@/components/AnimatedBackground';
 import QuizCreator from '@/components/QuizCreator';
 import SavedQuizzesManager from '@/components/SavedQuizzesManager';
 import BulkQuizGenerator from '@/components/BulkQuizGenerator';
+import FlashCardCreator from '@/components/FlashCardCreator';
+import FlashCardManager from '@/components/FlashCardManager';
+import FlashCardStudy from '@/components/FlashCardStudy';
+import QuizToFlashCards from '@/components/QuizToFlashCards';
+import AuthButton from '@/components/AuthButton';
 
-type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate';
+type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards';
 
 function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
@@ -23,8 +31,17 @@ function HomeContent() {
   const [isClient, setIsClient] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState<CustomQuiz | null>(null);
   const [editingQuiz, setEditingQuiz] = useState<CustomQuiz | null>(null);
+  const [editingDeck, setEditingDeck] = useState<FlashCardDeck | null>(null);
+  const [studyingDeck, setStudyingDeck] = useState<FlashCardDeck | null>(null);
   const { settings, updateSettings, resetSettings, isLoaded } = useSettings();
   const { allQuizzes, createQuiz, updateQuiz, isLoading, error } = useCustomQuizzes();
+  const { flashCardDecks, createDeck, updateDeck, deleteDeck } = useFlashCards();
+  const { user } = useAuth();
+
+  // Sync data with Firebase
+  useFirebaseSync('quizzes', allQuizzes, () => {});
+  useFirebaseSync('sessions', quizSessions, setQuizSessions);
+  useFirebaseSync('flashcards', flashCardDecks, () => {});
 
   const handleQuizComplete = useCallback((session: QuizSession) => {
     const sessionWithId = {
@@ -70,6 +87,37 @@ function HomeContent() {
     });
     setAppState('home');
   }, [createQuiz]);
+
+  // FlashCard handlers
+  const handleCreateFlashCards = useCallback(() => {
+    setEditingDeck(null);
+    setAppState('createFlashCards');
+  }, []);
+
+  const handleEditFlashCards = useCallback((deck: FlashCardDeck) => {
+    setEditingDeck(deck);
+    setAppState('editFlashCards');
+  }, []);
+
+  const handleStudyFlashCards = useCallback((deck: FlashCardDeck) => {
+    setStudyingDeck(deck);
+    setAppState('studyFlashCards');
+  }, []);
+
+  const handleSaveFlashCards = useCallback((deckData: any) => {
+    if (editingDeck) {
+      updateDeck(editingDeck.id, deckData);
+    } else {
+      createDeck(deckData);
+    }
+    setAppState('flashCards');
+    setEditingDeck(null);
+  }, [editingDeck, createDeck, updateDeck]);
+
+  const handleQuizToFlashCards = useCallback((deckData: any) => {
+    createDeck(deckData);
+    setAppState('flashCards');
+  }, [createDeck]);
 
   // Ensure client-side hydration is complete
   useEffect(() => {
@@ -184,7 +232,7 @@ function HomeContent() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 justify-center max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 justify-center max-w-4xl mx-auto">
           <button
             onClick={handleCreateQuiz}
             className="btn-secondary px-6 py-3 text-base"
@@ -202,6 +250,12 @@ function HomeContent() {
             className="btn-secondary px-6 py-3 text-base"
           >
             Manage Quizzes
+          </button>
+          <button
+            onClick={() => setAppState('flashCards')}
+            className="btn-secondary px-6 py-3 text-base"
+          >
+            Flash Cards
           </button>
           <button
             onClick={() => setAppState('statistics')}
@@ -227,7 +281,13 @@ function HomeContent() {
         enabled={settings.backgroundAnimations && settings.animations} 
         reduced={settings.reducedMotion}
       />
-      <SettingsButton onClick={handleSettingsOpen} />
+      <div className="flex justify-between items-center mb-6">
+        <div></div>
+        <div className="flex gap-3">
+          <SettingsButton onClick={handleSettingsOpen} />
+          <AuthButton />
+        </div>
+      </div>
       
       {appState === 'quiz' && (
         <div className={settings.animations ? 'animate-slide-in-right' : ''}>
@@ -330,6 +390,68 @@ function HomeContent() {
           <BulkQuizGenerator
             onSave={handleSaveBulkQuizzes}
             onCancel={() => setAppState('home')}
+          />
+        </div>
+      )}
+
+      {appState === 'flashCards' && (
+        <div className={settings.animations ? 'animate-slide-in-left' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <FlashCardManager
+            decks={flashCardDecks}
+            onCreateDeck={handleCreateFlashCards}
+            onEditDeck={handleEditFlashCards}
+            onDeleteDeck={deleteDeck}
+            onStudyDeck={handleStudyFlashCards}
+            onCreateFromQuiz={() => setAppState('quizToFlashCards')}
+          />
+        </div>
+      )}
+
+      {appState === 'createFlashCards' && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <FlashCardCreator
+            onSave={handleSaveFlashCards}
+            onCancel={() => setAppState('flashCards')}
+          />
+        </div>
+      )}
+
+      {appState === 'editFlashCards' && editingDeck && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <FlashCardCreator
+            deck={editingDeck}
+            onSave={handleSaveFlashCards}
+            onCancel={() => setAppState('flashCards')}
+          />
+        </div>
+      )}
+
+      {appState === 'studyFlashCards' && studyingDeck && (
+        <div className={settings.animations ? 'animate-slide-in-right' : ''}>
+          <FlashCardStudy
+            deck={studyingDeck}
+            onExit={() => setAppState('flashCards')}
+          />
+        </div>
+      )}
+
+      {appState === 'quizToFlashCards' && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <QuizToFlashCards
+            quizzes={allQuizzes}
+            onConvert={handleQuizToFlashCards}
+            onCancel={() => setAppState('flashCards')}
           />
         </div>
       )}
