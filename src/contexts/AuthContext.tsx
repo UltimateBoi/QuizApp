@@ -1,12 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  User,
-  GoogleAuthProvider,
-  signInWithPopup,
+import { 
+  User, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
   signOut as firebaseSignOut,
-  onAuthStateChanged,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 
@@ -15,25 +15,19 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  isConfigured: boolean;
+  isFirebaseReady: boolean;
+  authError: string | null;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signInWithGoogle: async () => {},
-  signOut: async () => {},
-  isConfigured: false,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !auth || !isFirebaseConfigured) {
+    if (!auth || !isFirebaseConfigured) {
       setLoading(false);
       return;
     }
@@ -41,48 +35,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+      setAuthError(null);
+    }, (error) => {
+      console.error('Auth state change error:', error);
+      setAuthError(error.message);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   const signInWithGoogle = async () => {
     if (!auth || !isFirebaseConfigured) {
-      console.error('Firebase is not configured. Please add Firebase credentials to .env.local');
-      alert('Authentication is not configured. Please contact the administrator.');
+      setAuthError('Firebase not configured');
       return;
     }
 
     try {
+      setAuthError(null);
       const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      setAuthError(error.message || 'Sign-in failed');
     }
   };
 
   const signOut = async () => {
-    if (!auth || !isFirebaseConfigured) {
-      console.error('Firebase is not configured');
-      return;
-    }
-
+    if (!auth) return;
+    
     try {
       await firebaseSignOut(auth);
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
+      setAuthError(null);
+    } catch (error: any) {
+      console.error('Sign-out error:', error);
+      setAuthError(error.message || 'Sign-out failed');
     }
   };
 
-  const value = {
-    user,
-    loading,
-    signInWithGoogle,
-    signOut,
-    isConfigured: !!isFirebaseConfigured,
-  };
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signInWithGoogle,
+        signOut,
+        isFirebaseReady: isFirebaseConfigured,
+        authError
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
