@@ -61,10 +61,16 @@ export function useSettings() {
     localStorage.setItem('quiz-app-settings', JSON.stringify(defaultSettings));
   };
 
+  const setSettingsDirectly = (newSettings: AppSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('quiz-app-settings', JSON.stringify(newSettings));
+  };
+
   return {
     settings,
     updateSettings,
     resetSettings,
+    setSettings: setSettingsDirectly,
     isLoaded
   };
 }

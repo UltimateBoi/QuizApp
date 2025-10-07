@@ -7,6 +7,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useCustomQuizzes } from '@/hooks/useCustomQuizzes';
 import { useFlashCards } from '@/hooks/useFlashCards';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
+import { useSettingsSync } from '@/hooks/useSettingsSync';
+import { useSyncManager } from '@/hooks/useSyncManager';
 import { useAuth } from '@/contexts/AuthContext';
 import Quiz from '@/components/Quiz';
 import Statistics from '@/components/Statistics';
@@ -21,6 +23,7 @@ import FlashCardManager from '@/components/FlashCardManager';
 import FlashCardStudy from '@/components/FlashCardStudy';
 import QuizToFlashCards from '@/components/QuizToFlashCards';
 import AuthButton from '@/components/AuthButton';
+import SyncDialog from '@/components/SyncDialog';
 
 type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards';
 
@@ -33,15 +36,36 @@ function HomeContent() {
   const [editingQuiz, setEditingQuiz] = useState<CustomQuiz | null>(null);
   const [editingDeck, setEditingDeck] = useState<FlashCardDeck | null>(null);
   const [studyingDeck, setStudyingDeck] = useState<FlashCardDeck | null>(null);
-  const { settings, updateSettings, resetSettings, isLoaded } = useSettings();
-  const { allQuizzes, createQuiz, updateQuiz, isLoading, error } = useCustomQuizzes();
-  const { flashCardDecks, createDeck, updateDeck, deleteDeck } = useFlashCards();
+  const { settings, updateSettings, resetSettings, setSettings, isLoaded } = useSettings();
+  const { allQuizzes, createQuiz, updateQuiz, isLoading, error, setCustomQuizzes } = useCustomQuizzes();
+  const { flashCardDecks, createDeck, updateDeck, deleteDeck, setFlashCardDecks } = useFlashCards();
   const { user } = useAuth();
 
-  // Sync data with Firebase
-  useFirebaseSync('quizzes', allQuizzes, () => {});
-  useFirebaseSync('sessions', quizSessions, setQuizSessions);
-  useFirebaseSync('flashcards', flashCardDecks, () => {});
+  // Sync manager for coordinated sync on login
+  const {
+    showSyncDialog,
+    isNewUser,
+    hasLocalData,
+    hasCloudData,
+    syncing,
+    syncComplete,
+    handleSyncAction,
+  } = useSyncManager({
+    localQuizzes: allQuizzes,
+    localSessions: quizSessions,
+    localFlashcards: flashCardDecks,
+    localSettings: settings,
+    setLocalQuizzes: setCustomQuizzes,
+    setLocalSessions: setQuizSessions,
+    setLocalFlashcards: setFlashCardDecks,
+    setLocalSettings: setSettings,
+  });
+
+  // Real-time sync after initial sync is complete
+  useFirebaseSync('quizzes', allQuizzes.filter(q => !q.isDefault), () => {}, syncComplete);
+  useFirebaseSync('sessions', quizSessions, setQuizSessions, syncComplete);
+  useFirebaseSync('flashcards', flashCardDecks, () => {}, syncComplete);
+  useSettingsSync(settings, setSettings, syncComplete);
 
   const handleQuizComplete = useCallback((session: QuizSession) => {
     const sessionWithId = {
@@ -468,6 +492,14 @@ function HomeContent() {
         settings={settings}
         onUpdateSettings={updateSettings}
         onResetSettings={resetSettings}
+      />
+
+      <SyncDialog
+        isOpen={showSyncDialog}
+        isNewUser={isNewUser}
+        hasLocalData={hasLocalData}
+        hasCloudData={hasCloudData}
+        onAction={handleSyncAction}
       />
     </div>
   );

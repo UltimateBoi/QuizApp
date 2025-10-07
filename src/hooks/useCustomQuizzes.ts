@@ -142,5 +142,6 @@ Please create a similar quiz following this exact format.`;
     deleteQuiz,
     duplicateQuiz,
     generateAIPrompt,
+    setCustomQuizzes,
   };
 }
