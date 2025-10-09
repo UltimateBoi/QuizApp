@@ -101,7 +101,7 @@ export function useSyncManager({
 
       try {
         // Check if user metadata exists
-        const userDocRef = doc(db, `users/${user.uid}`);
+        const userDocRef = doc(db, `users/${user.uid}/metadata/app`);
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
@@ -198,7 +198,8 @@ export function useSyncManager({
       }
 
       // Update user metadata
-      await setDoc(doc(db, `users/${user.uid}`), {
+      const metadataRef = doc(db, `users/${user.uid}/metadata/app`);
+      await setDoc(metadataRef, {
         lastSync: Timestamp.now(),
         createdAt: Timestamp.now(),
       }, { merge: true });
@@ -388,7 +389,8 @@ export function useSyncManager({
       setLocalSettings(mergedSettings);
 
       // Update user metadata
-      await setDoc(doc(db, `users/${user.uid}`), {
+      const metadataRef = doc(db, `users/${user.uid}/metadata/app`);
+      await setDoc(metadataRef, {
         lastSync: Timestamp.now(),
       }, { merge: true });
 
@@ -409,7 +411,8 @@ export function useSyncManager({
         // User skipped sync
         if (isNewUser && user && db) {
           // Still create user metadata for new users
-          await setDoc(doc(db, `users/${user.uid}`), {
+          const metadataRef = doc(db, `users/${user.uid}/metadata/app`);
+          await setDoc(metadataRef, {
             createdAt: Timestamp.now(),
             lastSync: Timestamp.now(),
           });
