@@ -95,22 +95,33 @@ export function useFirebaseSync<T extends { id: string }>(
     if (!user || !db || !isConfigured || !enabled) return;
 
     const userCollectionRef = collection(db, `users/${user.uid}/${collectionName}`);
-    const unsubscribe = onSnapshot(userCollectionRef, (snapshot) => {
-      const firebaseData: T[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        firebaseData.push({
-          ...data,
-          id: doc.id,
-        } as T);
-      });
+    const unsubscribe = onSnapshot(
+      userCollectionRef, 
+      (snapshot) => {
+        const firebaseData: T[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          firebaseData.push({
+            ...data,
+            id: doc.id,
+          } as T);
+        });
 
-      // Only update if data changed
-      if (JSON.stringify(firebaseData) !== JSON.stringify(localData)) {
-        setLocalData(firebaseData);
-        setLastSync(new Date());
+        // Only update if data changed
+        if (JSON.stringify(firebaseData) !== JSON.stringify(localData)) {
+          setLocalData(firebaseData);
+          setLastSync(new Date());
+        }
+      },
+      (error) => {
+        console.error(`Error in ${collectionName} snapshot listener:`, error);
+        
+        // Stop retrying on permission errors
+        if (error.code === 'permission-denied') {
+          console.error('❌ Permission denied - check Firebase security rules');
+        }
       }
-    });
+    );
 
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps

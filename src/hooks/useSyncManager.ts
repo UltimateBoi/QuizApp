@@ -81,8 +81,14 @@ export function useSyncManager({
       }
 
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking cloud data:', error);
+      
+      // If it's a permission error, we need to stop retrying
+      if (error.code === 'permission-denied') {
+        throw error;
+      }
+      
       return false;
     }
   }, [user]);
@@ -133,9 +139,18 @@ export function useSyncManager({
             setSyncComplete(true);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error checking sync status:', error);
-        setSyncComplete(true); // Continue anyway
+        
+        // If it's a permission-denied error, mark as complete to stop retrying
+        if (error.code === 'permission-denied') {
+          console.error('❌ Permission denied - Firebase security rules need to be configured');
+          console.error('Please deploy the firestore.rules file to your Firebase project');
+          alert('⚠️ Firebase Permission Denied\n\nYour Firebase security rules need to be configured.\n\nPlease run: firebase deploy --only firestore:rules\n\nOr manually update the rules in the Firebase Console.');
+        }
+        
+        // Stop retrying to prevent infinite loop
+        setSyncComplete(true);
       }
     };
 

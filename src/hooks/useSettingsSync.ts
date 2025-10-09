@@ -75,6 +75,14 @@ export function useSettingsSync(
             setLastSync(new Date());
           }
         }
+      },
+      (error) => {
+        console.error('Error in settings snapshot listener:', error);
+        
+        // Stop retrying on permission errors
+        if (error.code === 'permission-denied') {
+          console.error('❌ Permission denied - check Firebase security rules');
+        }
       }
     );
 
