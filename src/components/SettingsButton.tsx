@@ -8,7 +8,7 @@ export default function SettingsButton({ onClick }: SettingsButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="fixed top-4 right-4 z-40 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200 hover:scale-105 group"
+      className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-200 hover:scale-105 group"
       aria-label="Open settings"
     >
       <svg 

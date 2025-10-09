@@ -78,7 +78,7 @@ function HomeContent() {
   useFirebaseSync('quizzes', allQuizzes.filter(q => !q.isDefault), () => {}, syncComplete);
   useFirebaseSync('sessions', quizSessions, setQuizSessions, syncComplete);
   useFirebaseSync('flashcards', flashCardDecks, () => {}, syncComplete);
-  useSettingsSync(settings, setSettings, syncComplete);
+  const { syncing: settingsSyncing, lastSync: settingsLastSync, syncToFirebase: syncSettingsToFirebase } = useSettingsSync(settings, setSettings, syncComplete);
 
   const handleQuizComplete = useCallback((session: QuizSession) => {
     const sessionWithId = {
@@ -320,12 +320,13 @@ function HomeContent() {
         enabled={settings.backgroundAnimations && settings.animations} 
         reduced={settings.reducedMotion}
       />
-      <div className="flex justify-between items-center mb-6">
-        <div></div>
-        <div className="flex gap-3">
-          <SettingsButton onClick={handleSettingsOpen} />
-          <AuthButton />
-        </div>
+      <div className="fixed top-4 right-4 z-40 flex gap-3">
+        <SettingsButton onClick={handleSettingsOpen} />
+        <AuthButton 
+          syncing={syncing || settingsSyncing}
+          lastSync={settingsLastSync}
+          onManualSync={syncSettingsToFirebase}
+        />
       </div>
       
       {appState === 'quiz' && (
