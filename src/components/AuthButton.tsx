@@ -3,7 +3,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
-export default function AuthButton() {
+interface AuthButtonProps {
+  syncing?: boolean;
+  lastSync?: Date | null;
+  onManualSync?: () => Promise<void>;
+}
+
+export default function AuthButton({ syncing = false, lastSync = null, onManualSync }: AuthButtonProps = {}) {
   const { user, loading, signInWithGoogle, signOut, isConfigured } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -80,6 +86,40 @@ export default function AuthButton() {
               <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                 {user.email}
               </div>
+              
+              {/* Sync Status Section */}
+              <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Sync Status</span>
+                  {syncing ? (
+                    <div className="flex items-center gap-1">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                      <span className="text-xs text-blue-600 dark:text-blue-400">Syncing...</span>
+                    </div>
+                  ) : lastSync ? (
+                    <span className="text-xs text-green-600 dark:text-green-400">✓ Synced</span>
+                  ) : (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Not synced</span>
+                  )}
+                </div>
+                {lastSync && !syncing && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Last: {new Date(lastSync).toLocaleTimeString()}
+                  </p>
+                )}
+                {onManualSync && (
+                  <button
+                    onClick={() => {
+                      onManualSync();
+                    }}
+                    disabled={syncing}
+                    className="w-full mt-2 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {syncing ? 'Syncing...' : 'Sync Now'}
+                  </button>
+                )}
+              </div>
+              
               <button
                 onClick={() => {
                   signOut();
