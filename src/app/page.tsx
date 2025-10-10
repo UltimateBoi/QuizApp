@@ -18,6 +18,7 @@ import AnimatedBackground from '@/components/AnimatedBackground';
 import QuizCreator from '@/components/QuizCreator';
 import SavedQuizzesManager from '@/components/SavedQuizzesManager';
 import BulkQuizGenerator from '@/components/BulkQuizGenerator';
+import BulkFlashcardGenerator from '@/components/BulkFlashcardGenerator';
 import FlashCardCreator from '@/components/FlashCardCreator';
 import FlashCardManager from '@/components/FlashCardManager';
 import FlashCardStudy from '@/components/FlashCardStudy';
@@ -26,7 +27,7 @@ import AuthButton from '@/components/AuthButton';
 import SyncDialog from '@/components/SyncDialog';
 import AdBlockerWarning from '@/components/AdBlockerWarning';
 
-type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards';
+type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards' | 'bulkGenerateFlashcards';
 
 function HomeContent() {
   const [appState, setAppState] = useState<AppState>('home');
@@ -124,6 +125,13 @@ function HomeContent() {
     });
     setAppState('home');
   }, [createQuiz]);
+
+  const handleSaveBulkFlashcards = useCallback((decks: any[]) => {
+    decks.forEach(deckData => {
+      createDeck(deckData);
+    });
+    setAppState('flashCards');
+  }, [createDeck]);
 
   // FlashCard handlers
   const handleCreateFlashCards = useCallback(() => {
@@ -271,40 +279,67 @@ function HomeContent() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 justify-center max-w-4xl mx-auto">
-          <button
-            onClick={handleCreateQuiz}
-            className="btn-secondary px-6 py-3 text-base"
-          >
-            Create Quiz
-          </button>
-          <button
-            onClick={() => setAppState('bulkGenerate')}
-            className="btn-secondary px-6 py-3 text-base"
-          >
-            Bulk Generate
-          </button>
-          <button
-            onClick={() => setAppState('manageQuizzes')}
-            className="btn-secondary px-6 py-3 text-base"
-          >
-            Manage Quizzes
-          </button>
-          <button
-            onClick={() => setAppState('flashCards')}
-            className="btn-secondary px-6 py-3 text-base"
-          >
-            Flash Cards
-          </button>
+        {/* Quiz Section */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">Quizzes</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 justify-center max-w-3xl mx-auto">
+            <button
+              onClick={handleCreateQuiz}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Create Quiz
+            </button>
+            <button
+              onClick={() => setAppState('bulkGenerate')}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Bulk Generate Quizzes
+            </button>
+            <button
+              onClick={() => setAppState('manageQuizzes')}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Manage Quizzes
+            </button>
+          </div>
+        </div>
+
+        {/* Flashcard Section */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">Flashcards</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 justify-center max-w-3xl mx-auto">
+            <button
+              onClick={handleCreateFlashCards}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Create Flashcards
+            </button>
+            <button
+              onClick={() => setAppState('bulkGenerateFlashcards')}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Bulk Generate Flashcards
+            </button>
+            <button
+              onClick={() => setAppState('flashCards')}
+              className="btn-secondary px-6 py-3 text-base"
+            >
+              Manage Flashcards
+            </button>
+          </div>
+        </div>
+
+        {/* Statistics Button */}
+        <div className="flex justify-center">
           <button
             onClick={() => setAppState('statistics')}
-            className="btn-secondary px-6 py-3 text-base"
+            className="btn-secondary px-8 py-3 text-base"
             disabled={!isClient || quizSessions.length === 0}
           >
             View Statistics
           </button>
           {isLoading && (
-            <div className="flex items-center justify-center py-3">
+            <div className="flex items-center justify-center py-3 ml-4">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading quizzes...</span>
             </div>
@@ -429,6 +464,26 @@ function HomeContent() {
           </div>
           <BulkQuizGenerator
             onSave={handleSaveBulkQuizzes}
+            onCancel={() => setAppState('home')}
+          />
+        </div>
+      )}
+
+      {appState === 'bulkGenerateFlashcards' && (
+        <div className={settings.animations ? 'animate-slide-in-up' : ''}>
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setAppState('home')}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          <BulkFlashcardGenerator
+            onSave={handleSaveBulkFlashcards}
             onCancel={() => setAppState('home')}
           />
         </div>
