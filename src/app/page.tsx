@@ -25,7 +25,6 @@ import FlashCardStudy from '@/components/FlashCardStudy';
 import QuizToFlashCards from '@/components/QuizToFlashCards';
 import AuthButton from '@/components/AuthButton';
 import SyncDialog from '@/components/SyncDialog';
-import AdBlockerWarning from '@/components/AdBlockerWarning';
 
 type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards' | 'bulkGenerateFlashcards';
 
@@ -44,16 +43,16 @@ function HomeContent() {
   const { user, loading, isFirebaseReady } = useAuth();
 
   // Debug auth state
-  useEffect(() => {
-    console.log('🔐 Auth Debug:', {
-      user: user,
-      uid: user?.uid,
-      email: user?.email,
-      loading: loading,
-      isFirebaseReady: isFirebaseReady,
-      isAuthenticated: !!user
-    });
-  }, [user, loading, isFirebaseReady]);
+  // useEffect(() => {
+  //   console.log('🔐 Auth Debug:', {
+  //     user: user,
+  //     uid: user?.uid,
+  //     email: user?.email,
+  //     loading: loading,
+  //     isFirebaseReady: isFirebaseReady,
+  //     isAuthenticated: !!user
+  //   });
+  // }, [user, loading, isFirebaseReady]);
 
   // Sync manager for coordinated sync on login
   const {
@@ -169,6 +168,27 @@ function HomeContent() {
     setIsClient(true);
   }, []);
 
+  // Update page title dynamically based on app state
+  useEffect(() => {
+    const titles: Record<AppState, string> = {
+      home: 'QuizApp - Interactive Learning Platform',
+      quiz: 'QuizApp - Taking Quiz',
+      statistics: 'QuizApp - Statistics',
+      createQuiz: 'QuizApp - Create Quiz',
+      editQuiz: 'QuizApp - Edit Quiz',
+      manageQuizzes: 'QuizApp - Manage Quizzes',
+      bulkGenerate: 'QuizApp - Bulk Generate',
+      flashCards: 'QuizApp - Flashcards',
+      createFlashCards: 'QuizApp - Create Flashcards',
+      editFlashCards: 'QuizApp - Edit Flashcards',
+      studyFlashCards: 'QuizApp - Study Flashcards',
+      quizToFlashCards: 'QuizApp - Convert to Flashcards',
+      bulkGenerateFlashcards: 'QuizApp - Bulk Generate Flashcards',
+    };
+
+    document.title = titles[appState] || 'QuizApp';
+  }, [appState]);
+
   const renderHome = () => (
     <div className="max-w-4xl mx-auto text-center">
       <div className="card">
@@ -181,8 +201,6 @@ function HomeContent() {
             Track your progress, review explanations, and improve your skills with detailed statistics.
           </p>
         </div>
-
-        <AdBlockerWarning />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className={`bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800 hover:scale-105 transition-all duration-300 ${settings.animations ? 'animate-slide-in-left' : ''}`} style={{ animationDelay: '300ms' }}>

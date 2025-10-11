@@ -98,12 +98,12 @@ export function useSyncManager({
     const checkSyncStatus = async () => {
       if (!user || !db || !isConfigured || syncComplete) return;
 
-      console.log('🔍 Checking sync status for user:', {
-        uid: user.uid,
-        email: user.email,
-        isConfigured,
-        syncComplete
-      });
+      // console.log('🔍 Checking sync status for user:', {
+      //   uid: user.uid,
+      //   email: user.email,
+      //   isConfigured,
+      //   syncComplete
+      // });
 
       try {
         // Check if user metadata exists
@@ -169,7 +169,7 @@ export function useSyncManager({
       throw new Error('Firebase not configured');
     }
 
-    console.log('Syncing for user:', user.uid);
+    // console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -177,7 +177,7 @@ export function useSyncManager({
 
       // Upload quizzes (excluding default)
       const customQuizzes = localQuizzes.filter(q => !q.isDefault);
-      console.log('📤 Uploading', customQuizzes.length, 'quizzes');
+      // console.log('📤 Uploading', customQuizzes.length, 'quizzes');
       
       for (const quiz of customQuizzes) {
         const quizRef = doc(db, `users/${user.uid}/quizzes/${quiz.id}`);
@@ -185,7 +185,7 @@ export function useSyncManager({
       }
 
       // Upload sessions
-      console.log('📤 Uploading', localSessions.length, 'sessions');
+      // console.log('📤 Uploading', localSessions.length, 'sessions');
       
       for (const session of localSessions) {
         const sessionRef = doc(db, `users/${user.uid}/sessions/${session.id}`);
@@ -193,7 +193,7 @@ export function useSyncManager({
       }
 
       // Upload flashcards
-      console.log('📤 Uploading', localFlashcards.length, 'flashcard decks');
+      // console.log('📤 Uploading', localFlashcards.length, 'flashcard decks');
       
       for (const deck of localFlashcards) {
         const deckRef = doc(db, `users/${user.uid}/flashcards/${deck.id}`);
@@ -202,7 +202,7 @@ export function useSyncManager({
 
       await batch.commit();
 
-      console.log('✅ Batch write successful');
+      // console.log('✅ Batch write successful');
 
       // Upload settings separately
       if (localSettings && Object.keys(localSettings).length > 0) {
@@ -219,7 +219,7 @@ export function useSyncManager({
         createdAt: Timestamp.now(),
       }, { merge: true });
 
-      console.log('✅ Upload to cloud completed successfully');
+      // console.log('✅ Upload to cloud completed successfully');
 
     } catch (error) {
       console.error('Error uploading to cloud:', error);
@@ -241,7 +241,7 @@ export function useSyncManager({
       throw new Error('Firebase not configured');
     }
 
-    console.log('Syncing for user:', user.uid);
+    // console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -305,7 +305,7 @@ export function useSyncManager({
       throw new Error('Firebase not configured');
     }
 
-    console.log('Syncing for user:', user.uid);
+    // console.log('Syncing for user:', user.uid);
 
     setSyncing(true);
     try {
@@ -420,7 +420,7 @@ export function useSyncManager({
   // Handle sync action
   const handleSyncAction = async (action: SyncAction) => {
     try {
-      console.log('🔄 Sync action requested:', action, 'User:', user?.uid);
+      // console.log('🔄 Sync action requested:', action, 'User:', user?.uid);
       
       if (action === 'cancel') {
         // User skipped sync
@@ -447,7 +447,7 @@ export function useSyncManager({
 
       setShowSyncDialog(false);
       setSyncComplete(true);
-      console.log('✅ Sync completed successfully');
+      // console.log('✅ Sync completed successfully');
     } catch (error: any) {
       console.error('Sync action failed:', error);
       console.error('Error details:', {
