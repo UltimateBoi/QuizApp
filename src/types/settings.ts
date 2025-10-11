@@ -7,6 +7,7 @@ export interface AppSettings {
   soundEffects: boolean;
   showTimer: boolean;
   confirmBeforeSubmit: boolean;
+  geminiApiKey?: string; // Encrypted API key for Gemini AI
 }
 
 export const defaultSettings: AppSettings = {
@@ -18,4 +19,5 @@ export const defaultSettings: AppSettings = {
   soundEffects: false,
   showTimer: true,
   confirmBeforeSubmit: true,
+  geminiApiKey: '',
 };

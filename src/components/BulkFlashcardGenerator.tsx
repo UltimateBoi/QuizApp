@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FlashCard } from '@/types/quiz';
+import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { decryptApiKey } from '@/utils/encryption';
 
 interface FlashcardCreationData {
   name: string;
@@ -25,6 +28,24 @@ export default function BulkFlashcardGenerator({ onSave, onCancel }: BulkFlashca
   const [error, setError] = useState<string | null>(null);
   const [generatedDecks, setGeneratedDecks] = useState<FlashcardCreationData[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [showApiLimits, setShowApiLimits] = useState(false);
+  const { settings } = useSettings();
+  const { user } = useAuth();
+
+  // Load saved API key on mount
+  useEffect(() => {
+    const loadSavedApiKey = async () => {
+      if (settings.geminiApiKey && user) {
+        try {
+          const decrypted = await decryptApiKey(settings.geminiApiKey, user.uid);
+          setApiKey(decrypted);
+        } catch (error) {
+          console.error('Failed to decrypt API key:', error);
+        }
+      }
+    };
+    loadSavedApiKey();
+  }, [settings.geminiApiKey, user]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -267,10 +288,91 @@ Important:
               >
                 Google AI Studio
               </a>
+              {' · '}
+              <button
+                onClick={() => setShowApiLimits(!showApiLimits)}
+                className="underline hover:text-yellow-900 dark:hover:text-yellow-100"
+              >
+                {showApiLimits ? 'Hide' : 'View'} Free Tier Limits
+              </button>
             </p>
           </div>
         </div>
       </div>
+
+      {/* API Limits Panel */}
+      {showApiLimits && (
+        <div className="mb-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+            📊 Free API Key Limitations
+          </h4>
+          
+          {/* Simple Terms */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">🎯 Simple Terms:</p>
+            <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1 ml-4">
+              <li>• <strong>15 requests per minute</strong> - About 1 flashcard deck every 4 seconds</li>
+              <li>• <strong>1,500 requests per day</strong> - Generate ~100-150 flashcard decks daily</li>
+              <li>• <strong>1 million tokens per day</strong> - Roughly 750,000 words of content</li>
+              <li>• <strong>Perfect for personal use</strong> - More than enough for studying!</li>
+            </ul>
+          </div>
+
+          {/* Advanced Details */}
+          <div className="border-t border-blue-200 dark:border-blue-700 pt-3">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">🔬 Technical Details:</p>
+            <div className="text-xs text-gray-700 dark:text-gray-300 space-y-2">
+              <div>
+                <p className="font-medium">Rate Limits:</p>
+                <ul className="ml-4 space-y-0.5">
+                  <li>• 15 RPM (requests per minute)</li>
+                  <li>• 1,500 RPD (requests per day)</li>
+                  <li>• 1 million TPM (tokens per minute)</li>
+                </ul>
+              </div>
+              
+              <div>
+                <p className="font-medium">Content Processing:</p>
+                <ul className="ml-4 space-y-0.5">
+                  <li>• <strong>Input tokens:</strong> ~30,000 tokens per request (Gemini 1.5 Flash)</li>
+                  <li>• <strong>Output tokens:</strong> ~8,000 tokens max per response</li>
+                  <li>• <strong>File uploads:</strong> Text files up to ~10MB (PDF, TXT, DOC)</li>
+                  <li>• <strong>Context window:</strong> 1 million tokens total context</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-medium">Flashcard Generation Examples:</p>
+                <ul className="ml-4 space-y-0.5">
+                  <li>• <strong>Per minute:</strong> ~8-15 flashcard decks (each with 10-20 cards)</li>
+                  <li>• <strong>Per request:</strong> 3-5 topic decks with 50-100 total cards</li>
+                  <li>• <strong>With uploaded files:</strong> Process study materials up to 10MB</li>
+                  <li>• <strong>Bulk generation:</strong> Multiple topic decks in one request</li>
+                  <li>• <strong>Daily capacity:</strong> Hundreds of flashcard decks for study</li>
+                </ul>
+              </div>
+
+              <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                <p className="text-green-800 dark:text-green-200">
+                  <strong>💡 Pro Tip:</strong> Generate multiple flashcard decks in one request by describing all topics 
+                  in the specification field. This maximizes efficiency and stays within rate limits!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <a
+              href="https://ai.google.dev/pricing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              View official pricing & limits →
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         <div>
@@ -281,11 +383,14 @@ Important:
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Enter your Gemini API key"
+            placeholder={settings.geminiApiKey ? "Using saved API key" : "Enter your Gemini API key"}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Your API key is only used for this session and is not stored
+            {settings.geminiApiKey 
+              ? '✓ Using your saved API key from settings' 
+              : 'Your API key is only used for this session and is not stored unless you save it in Settings'
+            }
           </p>
         </div>
 
