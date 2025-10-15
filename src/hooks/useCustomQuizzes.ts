@@ -14,13 +14,19 @@ export function useCustomQuizzes() {
   useEffect(() => {
     const loadDefaultQuiz = async () => {
       try {
-        const response = await fetch('/default-quiz.json');
+        // Determine the base path based on environment
+        // In production (GitHub Pages), the basePath is /QuizApp
+        // In development, there's no basePath
+        const basePath = process.env.NODE_ENV === 'production' ? '/QuizApp' : '';
+        const response = await fetch(`${basePath}/default-quiz.json`);
+        
         if (!response.ok) {
           throw new Error('Failed to load default quiz');
         }
         const quiz: CustomQuiz = await response.json();
         setDefaultQuiz(quiz);
       } catch (err) {
+        console.error('Error loading default quiz:', err);
         setError(err instanceof Error ? err.message : 'Failed to load default quiz');
       } finally {
         setIsLoading(false);

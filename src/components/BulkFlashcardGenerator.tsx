@@ -6,6 +6,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { decryptApiKey } from '@/utils/encryption';
 import { processLargeDocument } from '@/utils/embeddings';
+import { processLargeDocumentSmart, estimateTokenUsage } from '@/utils/largeDocumentProcessor';
 
 interface FlashcardCreationData {
   name: string;
@@ -30,6 +31,7 @@ export default function BulkFlashcardGenerator({ onSave, onCancel }: BulkFlashca
   const [generatedDecks, setGeneratedDecks] = useState<FlashcardCreationData[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [showApiLimits, setShowApiLimits] = useState(false);
+  const [processingInfo, setProcessingInfo] = useState<string>('');
   const { settings } = useSettings();
   const { user } = useAuth();
 
@@ -80,22 +82,36 @@ export default function BulkFlashcardGenerator({ onSave, onCancel }: BulkFlashca
     setIsGenerating(true);
     setError(null);
     setGeneratedDecks([]);
+    setProcessingInfo('');
 
     try {
-      // Process large documents using embeddings for semantic chunking
+      // Use the new smart processor for large documents
       let processedContent = fileContent;
-      if (fileContent && fileContent.length > 20000) {
+      
+      if (fileContent && fileContent.length > 15000) {
+        setProcessingInfo(`📄 Processing large document (${(fileContent.length / 1024).toFixed(2)}KB)...`);
+        
         try {
-          processedContent = await processLargeDocument(
+          const result = await processLargeDocumentSmart(
             fileContent,
             specification,
-            apiKey,
-            20000
+            15000 // Conservative limit
           );
-        } catch (embeddingError) {
-          console.warn('Failed to use embeddings, falling back to truncation:', embeddingError);
-          // Fallback to simple truncation if embedding fails
-          processedContent = fileContent.substring(0, 20000) + '\n... [content truncated]';
+          
+          processedContent = result.processedText;
+          
+          const reduction = ((1 - result.processedSize / result.originalSize) * 100).toFixed(1);
+          setProcessingInfo(
+            `✅ Optimized: ${(result.originalSize / 1024).toFixed(2)}KB → ${(result.processedSize / 1024).toFixed(2)}KB (${reduction}% reduction)\n` +
+            `📊 Strategy: ${result.strategy}\n` +
+            `${result.topics ? `🎯 Found ${result.topics.length} key topics` : ''}`
+          );
+          
+          console.log('Document processing result:', result);
+        } catch (processingError) {
+          console.warn('Smart processing failed, using simple truncation:', processingError);
+          processedContent = fileContent.substring(0, 15000) + '\n... [content truncated]';
+          setProcessingInfo('⚠️ Using simple truncation due to processing error');
         }
       }
 
@@ -151,7 +167,14 @@ Important:
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate flashcard decks');
+        const errorMessage = errorData.error?.message || 'Failed to generate flashcard decks';
+        
+        // Check for rate limit or quota errors
+        if (response.status === 429 || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+          throw new Error('API quota exceeded. Please try again later or check your API key billing details. Visit https://ai.google.dev/gemini-api/docs/rate-limits for more information.');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -527,9 +550,18 @@ Important:
             </div>
           )}
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant flashcards. Large documents (&gt;20KB) are automatically processed using semantic chunking to extract the most relevant sections.
+            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant flashcards. Large documents (&gt;10MB) are automatically optimized using intelligent compression and semantic analysis.
           </p>
         </div>
+
+        {/* Processing Info Display */}
+        {processingInfo && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <pre className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap font-mono">
+              {processingInfo}
+            </pre>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

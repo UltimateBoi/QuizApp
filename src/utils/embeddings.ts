@@ -20,18 +20,20 @@ interface ChunkWithEmbedding {
  * Get embedding for a text chunk using Google's text-embedding-004 model
  */
 async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
-  // Ensure text doesn't exceed byte limit (Google's limit is 36KB)
-  // Using conservative limit to account for UTF-8 encoding
-  const maxBytes = 30000; // Conservative limit below 36KB
+  // Ensure text doesn't exceed byte limit (Google's limit is 20KB for embeddings)
+  // Using very conservative limit to account for JSON overhead and UTF-8 encoding
+  const maxBytes = 10000; // Very conservative limit to avoid API errors
   const encoder = new TextEncoder();
   let truncatedText = text;
   
   // Check if text exceeds byte limit and truncate if necessary
   let encoded = encoder.encode(text);
   if (encoded.length > maxBytes) {
-    // Truncate to fit within byte limit
+    // Truncate to fit within byte limit, accounting for potential multibyte characters
     const decoder = new TextDecoder();
     truncatedText = decoder.decode(encoded.slice(0, maxBytes));
+    // Remove any incomplete character at the end
+    truncatedText = truncatedText.replace(/[\uD800-\uDFFF]$/, '');
     console.warn(`Text truncated from ${encoded.length} to ${maxBytes} bytes for embedding`);
   }
 
@@ -83,10 +85,10 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Split text into chunks based on token limit
- * Aims for ~1000 tokens per chunk with some overlap
- * Using conservative chunk size to stay well under API limits
+ * Aims for smaller chunks to avoid embedding API limits
+ * Using very conservative chunk size to stay well under API limits
  */
-function splitIntoChunks(text: string, maxChunkSize: number = 2500): string[] {
+function splitIntoChunks(text: string, maxChunkSize: number = 1500): string[] {
   const chunks: string[] = [];
   const paragraphs = text.split(/\n\n+/);
   
@@ -117,7 +119,7 @@ function splitIntoChunks(text: string, maxChunkSize: number = 2500): string[] {
 export async function chunkDocumentWithEmbeddings(
   document: string,
   apiKey: string,
-  maxChunkSize: number = 2500
+  maxChunkSize: number = 1500
 ): Promise<ChunkWithEmbedding[]> {
   // Split document into manageable chunks
   const textChunks = splitIntoChunks(document, maxChunkSize);
@@ -138,9 +140,9 @@ export async function chunkDocumentWithEmbeddings(
       });
       currentIndex += chunk.length + 2; // +2 for paragraph break
       
-      // Add small delay between requests to avoid rate limiting
+      // Add longer delay between requests to avoid rate limiting
       if (i < textChunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {
       console.error('Error computing embedding for chunk:', error);
