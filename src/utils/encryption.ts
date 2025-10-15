@@ -6,6 +6,10 @@
  * - API keys are encrypted differently for each user
  * - API keys can be decrypted only by the same user
  * - API keys stored in Firebase are not readable in plaintext
+ * 
+ * Additionally, a SHA-256 hash of the API key is stored in Firestore for verification
+ * purposes. This one-way hash provides an additional security layer, ensuring that even
+ * if the database is compromised, the original API keys cannot be recovered from the hash alone.
  */
 
 /**
