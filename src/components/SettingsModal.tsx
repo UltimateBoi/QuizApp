@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AppSettings } from '@/types/settings';
 import { useAuth } from '@/contexts/AuthContext';
-import { encryptApiKey } from '@/utils/encryption';
+import { encryptApiKey, hashApiKey } from '@/utils/encryption';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export default function SettingsModal({
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [savingApiKey, setSavingApiKey] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
   const [showApiLimits, setShowApiLimits] = useState(false);
   const { user } = useAuth();
 
@@ -33,7 +34,8 @@ export default function SettingsModal({
 
   const handleSaveApiKey = async () => {
     if (!apiKeyInput.trim()) {
-      onUpdateSettings({ geminiApiKey: '' });
+      onUpdateSettings({ geminiApiKey: '', geminiApiKeyHash: '' });
+      setApiKeySaved(false);
       return;
     }
 
@@ -43,11 +45,21 @@ export default function SettingsModal({
     }
 
     setSavingApiKey(true);
+    setApiKeySaved(false);
     try {
+      // Encrypt the API key for local storage
       const encrypted = await encryptApiKey(apiKeyInput, user.uid);
-      onUpdateSettings({ geminiApiKey: encrypted });
+      // Hash the API key for verification (stored in Firestore for security)
+      const hashed = await hashApiKey(apiKeyInput);
+      
+      onUpdateSettings({ 
+        geminiApiKey: encrypted,
+        geminiApiKeyHash: hashed
+      });
       setApiKeyInput('');
-      alert('API key saved and encrypted successfully!');
+      setApiKeySaved(true);
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setApiKeySaved(false), 3000);
     } catch (error) {
       console.error('Error saving API key:', error);
       alert('Failed to save API key. Please try again.');
@@ -58,8 +70,9 @@ export default function SettingsModal({
 
   const handleRemoveApiKey = () => {
     if (confirm('Are you sure you want to remove your saved API key?')) {
-      onUpdateSettings({ geminiApiKey: '' });
+      onUpdateSettings({ geminiApiKey: '', geminiApiKeyHash: '' });
       setApiKeyInput('');
+      setApiKeySaved(false);
     }
   };
 
@@ -193,10 +206,15 @@ export default function SettingsModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Google Gemini API Key
+                  {settings.geminiApiKey && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                      ✓ Saved & Encrypted
+                    </span>
+                  )}
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                   Save your API key to use AI-powered quiz and flashcard generation. 
-                  {user ? ' Your key is encrypted before syncing.' : ' Sign in to sync across devices.'}
+                  {user ? ' Your key is encrypted and hashed before syncing to Firestore.' : ' Sign in to sync across devices.'}
                 </p>
                 <div className="flex space-x-2">
                   <div className="flex-1 relative">
@@ -223,6 +241,11 @@ export default function SettingsModal({
                     {savingApiKey ? '...' : 'Save'}
                   </button>
                 </div>
+                {apiKeySaved && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs text-green-800 dark:text-green-200">
+                    ✓ API key saved and encrypted successfully! It will sync to your account.
+                  </div>
+                )}
                 {settings.geminiApiKey && (
                   <button
                     onClick={handleRemoveApiKey}

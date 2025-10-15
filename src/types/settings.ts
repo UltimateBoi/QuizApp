@@ -8,6 +8,7 @@ export interface AppSettings {
   showTimer: boolean;
   confirmBeforeSubmit: boolean;
   geminiApiKey?: string; // Encrypted API key for Gemini AI
+  geminiApiKeyHash?: string; // SHA-256 hash for verification (stored in Firestore)
 }
 
 export const defaultSettings: AppSettings = {
@@ -20,4 +21,5 @@ export const defaultSettings: AppSettings = {
   showTimer: true,
   confirmBeforeSubmit: true,
   geminiApiKey: '',
+  geminiApiKeyHash: '',
 };

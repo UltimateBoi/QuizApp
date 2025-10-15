@@ -5,6 +5,7 @@ import { QuizCreationData } from '@/types/quiz';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { decryptApiKey } from '@/utils/encryption';
+import { processLargeDocument } from '@/utils/embeddings';
 
 interface BulkQuizGeneratorProps {
   onSave: (quizzes: QuizCreationData[]) => void;
@@ -74,7 +75,24 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
     setGeneratedQuizzes([]);
 
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey, {
+      // Process large documents using embeddings for semantic chunking
+      let processedContent = fileContent;
+      if (fileContent && fileContent.length > 20000) {
+        try {
+          processedContent = await processLargeDocument(
+            fileContent,
+            specification,
+            apiKey,
+            20000
+          );
+        } catch (embeddingError) {
+          console.warn('Failed to use embeddings, falling back to truncation:', embeddingError);
+          // Fallback to simple truncation if embedding fails
+          processedContent = fileContent.substring(0, 20000) + '\n... [content truncated]';
+        }
+      }
+
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +106,7 @@ Specification: ${specification}
 
 ${context ? `Additional Context/Instructions: ${context}` : ''}
 
-${fileContent ? `Reference Material/Content:\n${fileContent}\n` : ''}
+${processedContent ? `Reference Material/Content:\n${processedContent}\n` : ''}
 
 Return ONLY a JSON array with the following structure (no markdown formatting, no code blocks):
 [
@@ -332,9 +350,10 @@ Important:
               <div>
                 <p className="font-medium">Content Processing:</p>
                 <ul className="ml-4 space-y-0.5">
-                  <li>• <strong>Input tokens:</strong> ~30,000 tokens per request (Gemini 1.5 Flash)</li>
+                  <li>• <strong>Model:</strong> Gemini 2.5 Flash with text-embedding-004 for semantic chunking</li>
+                  <li>• <strong>Input tokens:</strong> ~30,000 tokens per request</li>
                   <li>• <strong>Output tokens:</strong> ~8,000 tokens max per response</li>
-                  <li>• <strong>File uploads:</strong> Text files up to ~10MB (PDF, TXT, DOC)</li>
+                  <li>• <strong>File uploads:</strong> Text files up to ~10MB (automatically chunked for large files)</li>
                   <li>• <strong>Context window:</strong> 1 million tokens total context</li>
                 </ul>
               </div>
@@ -506,7 +525,7 @@ Important:
             </div>
           )}
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant questions.
+            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant questions. Large documents (&gt;20KB) are automatically processed using semantic chunking to extract the most relevant sections.
           </p>
         </div>
 
