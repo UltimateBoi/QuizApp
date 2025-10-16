@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { QuizSession, CustomQuiz, FlashCardDeck } from '@/types/quiz';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSettings } from '@/hooks/useSettings';
@@ -29,6 +30,8 @@ import SyncDialog from '@/components/SyncDialog';
 type AppState = 'home' | 'quiz' | 'statistics' | 'createQuiz' | 'editQuiz' | 'manageQuizzes' | 'bulkGenerate' | 'flashCards' | 'createFlashCards' | 'editFlashCards' | 'studyFlashCards' | 'quizToFlashCards' | 'bulkGenerateFlashcards';
 
 function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [appState, setAppState] = useState<AppState>('home');
   const [quizSessions, setQuizSessions] = useLocalStorage<QuizSession[]>('quiz-sessions', []);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -74,11 +77,26 @@ function HomeContent() {
     setLocalSettings: setSettings,
   });
 
-  // Real-time sync after initial sync is complete
-  useFirebaseSync('quizzes', allQuizzes.filter(q => !q.isDefault), () => {}, syncComplete);
-  useFirebaseSync('sessions', quizSessions, setQuizSessions, syncComplete);
-  useFirebaseSync('flashcards', flashCardDecks, () => {}, syncComplete);
+  const { syncing: quizzesSyncing, lastSync: quizzesLastSync, syncToFirebase: syncQuizzesToFirebase } = useFirebaseSync('quizzes', allQuizzes.filter(q => !q.isDefault), setCustomQuizzes, syncComplete);
+  const { syncing: sessionsSyncing, lastSync: sessionsLastSync, syncToFirebase: syncSessionsToFirebase } = useFirebaseSync('sessions', quizSessions, setQuizSessions, syncComplete);
+  const { syncing: flashcardsSyncing, lastSync: flashcardsLastSync, syncToFirebase: syncFlashcardsToFirebase } = useFirebaseSync('flashcards', flashCardDecks, setFlashCardDecks, syncComplete);
   const { syncing: settingsSyncing, lastSync: settingsLastSync, syncToFirebase: syncSettingsToFirebase } = useSettingsSync(settings, setSettings, syncComplete);
+
+  // Update URL when app state changes (client-side routing)
+  const updateURL = useCallback((newState: AppState, params?: Record<string, string>) => {
+    const urlParams = new URLSearchParams();
+    urlParams.set('view', newState);
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) urlParams.set(key, value);
+      });
+    }
+    
+    const newURL = `?${urlParams.toString()}`;
+    router.push(newURL, { scroll: false });
+    setAppState(newState);
+  }, [router]);
 
   const handleQuizComplete = useCallback((session: QuizSession) => {
     const sessionWithId = {
@@ -88,25 +106,26 @@ function HomeContent() {
       quizName: selectedQuiz?.name || 'Unknown Quiz'
     };
     setQuizSessions(prev => [...prev, sessionWithId]);
-  }, [setQuizSessions, selectedQuiz]);
+    syncSessionsToFirebase();
+  }, [setQuizSessions, selectedQuiz, syncSessionsToFirebase]);
 
   const handleSettingsOpen = useCallback(() => setIsSettingsOpen(true), []);
   const handleSettingsClose = useCallback(() => setIsSettingsOpen(false), []);
 
   const handleCreateQuiz = useCallback(() => {
     setEditingQuiz(null);
-    setAppState('createQuiz');
-  }, []);
+    updateURL('createQuiz');
+  }, [updateURL]);
 
   const handleEditQuiz = useCallback((quiz: CustomQuiz) => {
     setEditingQuiz(quiz);
-    setAppState('editQuiz');
-  }, []);
+    updateURL('editQuiz', { quizId: quiz.id });
+  }, [updateURL]);
 
   const handleSelectQuiz = useCallback((quiz: CustomQuiz) => {
     setSelectedQuiz(quiz);
-    setAppState('quiz');
-  }, []);
+    updateURL('quiz', { quizId: quiz.id });
+  }, [updateURL]);
 
   const handleSaveQuiz = useCallback((quizData: any) => {
     if (editingQuiz && !editingQuiz.isDefault) {
@@ -114,39 +133,42 @@ function HomeContent() {
     } else {
       createQuiz(quizData);
     }
-    setAppState('home');
+    syncQuizzesToFirebase();
+    updateURL('home');
     setEditingQuiz(null);
-  }, [editingQuiz, createQuiz, updateQuiz]);
+  }, [editingQuiz, createQuiz, updateQuiz, syncQuizzesToFirebase, updateURL]);
 
   const handleSaveBulkQuizzes = useCallback((quizzes: any[]) => {
     quizzes.forEach(quizData => {
       createQuiz(quizData);
     });
-    setAppState('home');
-  }, [createQuiz]);
+    syncQuizzesToFirebase();
+    updateURL('home');
+  }, [createQuiz, syncQuizzesToFirebase, updateURL]);
 
   const handleSaveBulkFlashcards = useCallback((decks: any[]) => {
     decks.forEach(deckData => {
       createDeck(deckData);
     });
-    setAppState('flashCards');
-  }, [createDeck]);
+    syncFlashcardsToFirebase();
+    updateURL('flashCards');
+  }, [createDeck, syncFlashcardsToFirebase, updateURL]);
 
   // FlashCard handlers
   const handleCreateFlashCards = useCallback(() => {
     setEditingDeck(null);
-    setAppState('createFlashCards');
-  }, []);
+    updateURL('createFlashCards');
+  }, [updateURL]);
 
   const handleEditFlashCards = useCallback((deck: FlashCardDeck) => {
     setEditingDeck(deck);
-    setAppState('editFlashCards');
-  }, []);
+    updateURL('editFlashCards', { deckId: deck.id });
+  }, [updateURL]);
 
   const handleStudyFlashCards = useCallback((deck: FlashCardDeck) => {
     setStudyingDeck(deck);
-    setAppState('studyFlashCards');
-  }, []);
+    updateURL('studyFlashCards', { deckId: deck.id });
+  }, [updateURL]);
 
   const handleSaveFlashCards = useCallback((deckData: any) => {
     if (editingDeck) {
@@ -154,19 +176,56 @@ function HomeContent() {
     } else {
       createDeck(deckData);
     }
-    setAppState('flashCards');
+    syncFlashcardsToFirebase();
+    updateURL('flashCards');
     setEditingDeck(null);
-  }, [editingDeck, createDeck, updateDeck]);
+  }, [editingDeck, createDeck, updateDeck, syncFlashcardsToFirebase, updateURL]);
 
   const handleQuizToFlashCards = useCallback((deckData: any) => {
     createDeck(deckData);
-    setAppState('flashCards');
-  }, [createDeck]);
+    updateURL('flashCards');
+  }, [createDeck, updateURL]);
 
   // Ensure client-side hydration is complete
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Initialize app state from URL on mount
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const view = searchParams.get('view') as AppState;
+    const quizId = searchParams.get('quizId');
+    const deckId = searchParams.get('deckId');
+    
+    if (view && view !== appState) {
+      setAppState(view);
+      
+      // Restore selected quiz if quizId is in URL
+      if (quizId && view === 'quiz') {
+        const quiz = allQuizzes.find(q => q.id === quizId);
+        if (quiz) setSelectedQuiz(quiz);
+      }
+      
+      // Restore editing quiz if quizId is in URL
+      if (quizId && view === 'editQuiz') {
+        const quiz = allQuizzes.find(q => q.id === quizId);
+        if (quiz) setEditingQuiz(quiz);
+      }
+      
+      // Restore deck if deckId is in URL
+      if (deckId && view === 'editFlashCards') {
+        const deck = flashCardDecks.find(d => d.id === deckId);
+        if (deck) setEditingDeck(deck);
+      }
+      
+      if (deckId && view === 'studyFlashCards') {
+        const deck = flashCardDecks.find(d => d.id === deckId);
+        if (deck) setStudyingDeck(deck);
+      }
+    }
+  }, [isClient, searchParams, allQuizzes, flashCardDecks]);
 
   // Update page title dynamically based on app state
   useEffect(() => {
@@ -308,13 +367,13 @@ function HomeContent() {
               Create Quiz
             </button>
             <button
-              onClick={() => setAppState('bulkGenerate')}
+              onClick={() => updateURL('bulkGenerate')}
               className="btn-secondary px-6 py-3 text-base"
             >
               Bulk Generate Quizzes
             </button>
             <button
-              onClick={() => setAppState('manageQuizzes')}
+              onClick={() => updateURL('manageQuizzes')}
               className="btn-secondary px-6 py-3 text-base"
             >
               Manage Quizzes
@@ -333,13 +392,13 @@ function HomeContent() {
               Create Flashcards
             </button>
             <button
-              onClick={() => setAppState('bulkGenerateFlashcards')}
+              onClick={() => updateURL('bulkGenerateFlashcards')}
               className="btn-secondary px-6 py-3 text-base"
             >
               Bulk Generate Flashcards
             </button>
             <button
-              onClick={() => setAppState('flashCards')}
+              onClick={() => updateURL('flashCards')}
               className="btn-secondary px-6 py-3 text-base"
             >
               Manage Flashcards
@@ -350,7 +409,7 @@ function HomeContent() {
         {/* Statistics Button */}
         <div className="flex justify-center">
           <button
-            onClick={() => setAppState('statistics')}
+            onClick={() => updateURL('statistics')}
             className="btn-secondary px-8 py-3 text-base"
             disabled={!isClient || quizSessions.length === 0}
           >
@@ -386,7 +445,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-right' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,7 +462,7 @@ function HomeContent() {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500 dark:text-gray-400 mb-4">No quiz selected</p>
-              <button onClick={() => setAppState('home')} className="btn-primary">
+              <button onClick={() => updateURL('home')} className="btn-primary">
                 Select a Quiz
               </button>
             </div>
@@ -415,7 +474,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-left' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,7 +491,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-up' : ''}>
           <QuizCreator
             onSave={handleSaveQuiz}
-            onCancel={() => setAppState('home')}
+            onCancel={() => updateURL('home')}
           />
         </div>
       )}
@@ -442,7 +501,7 @@ function HomeContent() {
           <QuizCreator
             quiz={editingQuiz}
             onSave={handleSaveQuiz}
-            onCancel={() => setAppState('home')}
+            onCancel={() => updateURL('home')}
           />
         </div>
       )}
@@ -451,7 +510,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-left' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,7 +530,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-up' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,7 +541,7 @@ function HomeContent() {
           </div>
           <BulkQuizGenerator
             onSave={handleSaveBulkQuizzes}
-            onCancel={() => setAppState('home')}
+            onCancel={() => updateURL('home')}
           />
         </div>
       )}
@@ -491,7 +550,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-up' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,7 +561,7 @@ function HomeContent() {
           </div>
           <BulkFlashcardGenerator
             onSave={handleSaveBulkFlashcards}
-            onCancel={() => setAppState('home')}
+            onCancel={() => updateURL('home')}
           />
         </div>
       )}
@@ -511,7 +570,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-left' : ''}>
           <div className="mb-6 text-center">
             <button
-              onClick={() => setAppState('home')}
+              onClick={() => updateURL('home')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 flex items-center mx-auto"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -526,7 +585,7 @@ function HomeContent() {
             onEditDeck={handleEditFlashCards}
             onDeleteDeck={deleteDeck}
             onStudyDeck={handleStudyFlashCards}
-            onCreateFromQuiz={() => setAppState('quizToFlashCards')}
+            onCreateFromQuiz={() => updateURL('quizToFlashCards')}
           />
         </div>
       )}
@@ -535,7 +594,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-up' : ''}>
           <FlashCardCreator
             onSave={handleSaveFlashCards}
-            onCancel={() => setAppState('flashCards')}
+            onCancel={() => updateURL('flashCards')}
           />
         </div>
       )}
@@ -545,7 +604,7 @@ function HomeContent() {
           <FlashCardCreator
             deck={editingDeck}
             onSave={handleSaveFlashCards}
-            onCancel={() => setAppState('flashCards')}
+            onCancel={() => updateURL('flashCards')}
           />
         </div>
       )}
@@ -564,7 +623,7 @@ function HomeContent() {
           <QuizToFlashCards
             quizzes={allQuizzes}
             onConvert={handleQuizToFlashCards}
-            onCancel={() => setAppState('flashCards')}
+            onCancel={() => updateURL('flashCards')}
           />
         </div>
       )}
