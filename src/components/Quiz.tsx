@@ -56,14 +56,14 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
 
   // Timer effect
   useEffect(() => {
-    if (!settings.showTimer) return;
+    if (!settings.showTimer || quizComplete) return;
     
     const interval = setInterval(() => {
       setElapsedTime(Math.floor((new Date().getTime() - questionStartTime.getTime()) / 1000));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [questionStartTime, settings.showTimer]);
+  }, [questionStartTime, settings.showTimer, quizComplete]);
 
   const handleSubmitAnswer = (optionsToSubmit?: number[]) => {
     const optionsToUse = optionsToSubmit || selectedOptions;
