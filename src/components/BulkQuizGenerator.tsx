@@ -16,8 +16,8 @@ interface BulkQuizGeneratorProps {
 export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGeneratorProps) {
   const [specification, setSpecification] = useState('');
   const [context, setContext] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [fileContent, setFileContent] = useState<string>('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [fileContents, setFileContents] = useState<string[]>([]);
   const [apiKey, setApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +25,7 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
   const [showPreview, setShowPreview] = useState(false);
   const [showApiLimits, setShowApiLimits] = useState(false);
   const [processingInfo, setProcessingInfo] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
   const { settings } = useSettings();
   const { user } = useAuth();
 
@@ -44,21 +45,61 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
   }, [settings.geminiApiKey, user]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        setFileContent(content);
-      };
-      reader.readAsText(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      processFiles(files);
     }
   };
 
-  const handleRemoveFile = () => {
-    setUploadedFile(null);
-    setFileContent('');
+  const processFiles = (files: File[]) => {
+    const newFiles = [...uploadedFiles, ...files];
+    setUploadedFiles(newFiles);
+    
+    // Read all files
+    const readers = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result as string;
+          resolve(content);
+        };
+        reader.readAsText(file);
+      });
+    });
+    
+    Promise.all(readers).then(contents => {
+      setFileContents([...fileContents, ...contents]);
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.name.match(/\.(txt|md|pdf|doc|docx)$/i)
+    );
+    
+    if (files.length > 0) {
+      processFiles(files);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    const newFiles = uploadedFiles.filter((_, i) => i !== index);
+    const newContents = fileContents.filter((_, i) => i !== index);
+    setUploadedFiles(newFiles);
+    setFileContents(newContents);
   };
 
   const handleGenerate = async () => {
@@ -78,16 +119,19 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
     setProcessingInfo('');
 
     try {
+      // Combine all file contents
+      const combinedFileContent = fileContents.join('\n\n---\n\n');
+      
       // Use the new smart processor for large documents
-      let processedContent = fileContent;
+      let processedContent = combinedFileContent;
       let processingStrategy = 'none';
       
-      if (fileContent && fileContent.length > 15000) {
-        setProcessingInfo(`📄 Processing large document (${(fileContent.length / 1024).toFixed(2)}KB)...`);
+      if (combinedFileContent && combinedFileContent.length > 15000) {
+        setProcessingInfo(`📄 Processing ${uploadedFiles.length} document(s) (${(combinedFileContent.length / 1024).toFixed(2)}KB total)...`);
         
         try {
           const result = await processLargeDocumentSmart(
-            fileContent,
+            combinedFileContent,
             specification,
             15000 // Conservative limit
           );
@@ -105,7 +149,7 @@ export default function BulkQuizGenerator({ onSave, onCancel }: BulkQuizGenerato
           console.log('Document processing result:', result);
         } catch (processingError) {
           console.warn('Smart processing failed, using simple truncation:', processingError);
-          processedContent = fileContent.substring(0, 15000) + '\n... [content truncated]';
+          processedContent = combinedFileContent.substring(0, 15000) + '\n... [content truncated]';
           setProcessingInfo('⚠️ Using simple truncation due to processing error');
         }
       }
@@ -490,18 +534,27 @@ Important:
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Reference Material (Optional)
           </label>
-          {!uploadedFile ? (
-            <div>
+          {uploadedFiles.length === 0 ? (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 id="file-upload"
                 accept=".txt,.md,.pdf,.doc,.docx"
                 onChange={handleFileUpload}
+                multiple
                 className="hidden"
               />
               <label
                 htmlFor="file-upload"
-                className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-white dark:bg-gray-800"
+                className={`flex items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-white dark:bg-gray-800 ${
+                  isDragging
+                    ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400'
+                }`}
               >
                 <div className="text-center">
                   <svg
@@ -519,56 +572,93 @@ Important:
                     />
                   </svg>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Click to upload a file or drag and drop
+                    {isDragging ? 'Drop files here' : 'Click to upload or drag and drop'}
                   </p>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                    TXT, MD, PDF, DOC up to 10MB
+                    TXT, MD, PDF, DOC up to 10MB each • Multiple files supported
                   </p>
                 </div>
               </label>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
-              <div className="flex items-center space-x-3">
-                <svg
-                  className="w-8 h-8 text-blue-500 dark:text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="space-y-2">
+              {uploadedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {uploadedFile.name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {(uploadedFile.size / 1024).toFixed(2)} KB
-                  </p>
+                  <div className="flex items-center space-x-3">
+                    <svg
+                      className="w-8 h-8 text-blue-500 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveFile(index)}
+                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
                 </div>
-              </div>
-              <button
-                onClick={handleRemoveFile}
-                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              ))}
+              
+              {/* Add more files button */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                <input
+                  type="file"
+                  id="file-upload-more"
+                  accept=".txt,.md,.pdf,.doc,.docx"
+                  onChange={handleFileUpload}
+                  multiple
+                  className="hidden"
+                />
+                <label
+                  htmlFor="file-upload-more"
+                  className={`flex items-center justify-center w-full px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                    isDragging
+                      ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-gray-800'
+                  }`}
+                >
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {isDragging ? '➕ Drop more files here' : '➕ Add more files'}
+                    </p>
+                  </div>
+                </label>
+              </div>
             </div>
           )}
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant questions. Large documents (&gt;10MB) are automatically optimized using intelligent compression and semantic analysis.
+            Upload reference material like lecture notes, textbook chapters, or study guides to generate more relevant questions. Multiple files will be combined. Large documents (&gt;10MB total) are automatically optimized using intelligent compression and semantic analysis.
           </p>
         </div>
 

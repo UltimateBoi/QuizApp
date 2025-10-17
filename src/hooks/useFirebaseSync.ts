@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import {
@@ -21,6 +21,8 @@ export function useFirebaseSync<T extends { id: string }>(
   const { user, isConfigured } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const prevDataRef = useRef<string>('');
+  const isLoadingRef = useRef<boolean>(false);
 
   // Sync local data to Firebase when user is authenticated
   const syncToFirebase = useCallback(async () => {
@@ -61,6 +63,7 @@ export function useFirebaseSync<T extends { id: string }>(
 
     if (!db || !isConfigured || !enabled) return;
 
+    isLoadingRef.current = true;
     setSyncing(true);
     try {
       const userCollectionRef = collection(db, `users/${user.uid}/${collectionName}`);
@@ -80,12 +83,17 @@ export function useFirebaseSync<T extends { id: string }>(
       firebaseData.forEach(item => localMap.set(item.id, item));
       
       const mergedData = Array.from(localMap.values());
+      
+      // Update the ref to track loaded data
+      prevDataRef.current = JSON.stringify(mergedData);
+      
       setLocalData(mergedData);
       setLastSync(new Date());
     } catch (error) {
       console.error(`Error loading ${collectionName} from Firebase:`, error);
     } finally {
       setSyncing(false);
+      isLoadingRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isConfigured, collectionName, localData, setLocalData, enabled]);
@@ -107,8 +115,10 @@ export function useFirebaseSync<T extends { id: string }>(
           } as T);
         });
 
-        // Only update if data changed
-        if (JSON.stringify(firebaseData) !== JSON.stringify(localData)) {
+        // Only update if data changed and not during loading
+        const newDataStr = JSON.stringify(firebaseData);
+        if (!isLoadingRef.current && newDataStr !== prevDataRef.current) {
+          prevDataRef.current = newDataStr;
           setLocalData(firebaseData);
           setLastSync(new Date());
         }
@@ -134,14 +144,16 @@ export function useFirebaseSync<T extends { id: string }>(
     }
   }, [user, isConfigured, lastSync, loadFromFirebase, enabled]);
 
-  // Auto-sync when local data changes
+  // Sync when local data actually changes (not on timer)
   useEffect(() => {
-    if (user && isConfigured && localData.length > 0 && lastSync && enabled) {
-      const timeoutId = setTimeout(() => {
-        syncToFirebase();
-      }, 2000); // Debounce syncing
-
-      return () => clearTimeout(timeoutId);
+    if (!user || !isConfigured || !lastSync || !enabled || isLoadingRef.current) return;
+    
+    const currentDataStr = JSON.stringify(localData);
+    
+    // Only sync if data has actually changed
+    if (currentDataStr !== prevDataRef.current && localData.length > 0) {
+      prevDataRef.current = currentDataStr;
+      syncToFirebase();
     }
   }, [user, isConfigured, localData, lastSync, syncToFirebase, enabled]);
 
