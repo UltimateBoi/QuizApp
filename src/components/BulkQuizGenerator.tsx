@@ -191,9 +191,9 @@ ${processedContent ? `Reference Material/Content:\n${processedContent}\n` : ''}
 Return ONLY a JSON array with the following structure (no markdown formatting, no code blocks):
 [
   {
-    "name": "Topic 1: [Title]",
+    "name": "[Full topic number and title, e.g., '1.3.1 Data Structures' or 'Topic 2.5 Advanced Algorithms']",
     "description": "[Description of this topic]",
-    "tags": ["tag1", "tag2"],
+    "tags": ["[topic number, e.g., '1.3.1']", "tag2", "tag3"],
     "questions": [
       {
         "type": "singleSelect",
@@ -209,7 +209,11 @@ Return ONLY a JSON array with the following structure (no markdown formatting, n
 Important:
 - Generate at least 3-5 separate quizzes covering different topics
 - Each quiz should have 5-10 questions
-- Use descriptive topic numbers and titles (e.g., "Topic 1: Introduction", "Topic 2: Advanced Concepts")
+- PRESERVE EXACT topic numbers from the specification (e.g., 1.3.1, 1.3.2, 2.1, etc.) - do NOT simplify to "Topic 1", "Topic 2"
+- Include the specific topic number as the FIRST tag in the tags array
+- If the specification mentions specific numbering (like 1.3.1, 1.3.2), use those exact numbers
+- If no specific numbers are in the specification, use a clear hierarchical numbering (e.g., 1.1, 1.2, 2.1, 2.2)
+- Quiz names should include the full topic number and descriptive title
 - Mix singleSelect and multiSelect question types
 - For multiSelect, answer should be an array with multiple indices
 - All questions must have detailed explanations
