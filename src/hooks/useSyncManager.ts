@@ -13,6 +13,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { SyncAction } from '@/components/SyncDialog';
+import { hasDataDifference, hasSettingsDifference } from '@/utils/dataComparison';
 
 interface SyncData {
   quizzes: any[];
@@ -59,6 +60,86 @@ export function useSyncManager({
     );
   }, [localQuizzes, localSessions, localFlashcards, localSettings]);
 
+  // Check if this is the first login on this device
+  const isFirstLoginOnDevice = useCallback((): boolean => {
+    if (!user) return false;
+    
+    try {
+      const key = `quiz-app-synced-${user.uid}`;
+      const synced = localStorage.getItem(key);
+      return !synced;
+    } catch (error) {
+      console.error('Error checking first login status:', error);
+      return false;
+    }
+  }, [user]);
+
+  // Mark device as synced
+  const markDeviceAsSynced = useCallback(() => {
+    if (!user) return;
+    
+    try {
+      const key = `quiz-app-synced-${user.uid}`;
+      localStorage.setItem(key, 'true');
+    } catch (error) {
+      console.error('Error marking device as synced:', error);
+    }
+  }, [user]);
+
+  // Check if there's an actual difference between local and cloud data
+  const checkDataDifference = useCallback(async (): Promise<boolean> => {
+    if (!user || !db) return false;
+
+    try {
+      const cloudData: SyncData = {
+        quizzes: [],
+        sessions: [],
+        flashcards: [],
+        settings: {},
+      };
+
+      // Download cloud data
+      const quizzesSnapshot = await getDocs(collection(db, `users/${user.uid}/quizzes`));
+      quizzesSnapshot.forEach((doc) => {
+        cloudData.quizzes.push({ ...doc.data(), id: doc.id });
+      });
+
+      const sessionsSnapshot = await getDocs(collection(db, `users/${user.uid}/sessions`));
+      sessionsSnapshot.forEach((doc) => {
+        cloudData.sessions.push({ ...doc.data(), id: doc.id });
+      });
+
+      const flashcardsSnapshot = await getDocs(collection(db, `users/${user.uid}/flashcards`));
+      flashcardsSnapshot.forEach((doc) => {
+        cloudData.flashcards.push({ ...doc.data(), id: doc.id });
+      });
+
+      const settingsDoc = await getDoc(doc(db, `users/${user.uid}/settings/app`));
+      if (settingsDoc.exists()) {
+        cloudData.settings = settingsDoc.data();
+      }
+
+      // Compare local and cloud data
+      const localCustomQuizzes = localQuizzes.filter(q => !q.isDefault);
+      
+      const quizzesDiff = hasDataDifference(localCustomQuizzes, cloudData.quizzes);
+      const sessionsDiff = hasDataDifference(localSessions, cloudData.sessions);
+      const flashcardsDiff = hasDataDifference(localFlashcards, cloudData.flashcards);
+      const settingsDiff = hasSettingsDifference(localSettings, cloudData.settings);
+
+      return quizzesDiff || sessionsDiff || flashcardsDiff || settingsDiff;
+    } catch (error: any) {
+      console.error('Error checking data difference:', error);
+      
+      // If it's a permission error, we need to stop retrying
+      if (error.code === 'permission-denied') {
+        throw error;
+      }
+      
+      return false;
+    }
+  }, [user, localQuizzes, localSessions, localFlashcards, localSettings]);
+
   // Check if cloud data exists
   const checkCloudDataExists = useCallback(async (): Promise<boolean> => {
     if (!user || !db) return false;
@@ -98,12 +179,14 @@ export function useSyncManager({
     const checkSyncStatus = async () => {
       if (!user || !db || !isConfigured || syncComplete) return;
 
-      // console.log('🔍 Checking sync status for user:', {
-      //   uid: user.uid,
-      //   email: user.email,
-      //   isConfigured,
-      //   syncComplete
-      // });
+      // Check if this is the first login on this device
+      const isFirstLogin = isFirstLoginOnDevice();
+      
+      // If not first login, skip the sync dialog and mark as complete
+      if (!isFirstLogin) {
+        setSyncComplete(true);
+        return;
+      }
 
       try {
         // Check if user metadata exists
@@ -115,7 +198,7 @@ export function useSyncManager({
           setIsNewUser(true);
           setHasCloudData(false);
           
-          // Show dialog if has local data or just mark as complete
+          // Show dialog if has local data, otherwise just mark as synced
           if (hasLocalData()) {
             setShowSyncDialog(true);
           } else {
@@ -124,18 +207,29 @@ export function useSyncManager({
               createdAt: Timestamp.now(),
               lastSync: Timestamp.now(),
             });
+            markDeviceAsSynced();
             setSyncComplete(true);
           }
         } else {
-          // Returning user - check if cloud data exists
+          // Returning user - check if there's an actual difference
           setIsNewUser(false);
           
           const hasData = await checkCloudDataExists();
           setHasCloudData(hasData);
           
+          // Only show dialog if there's an actual difference between local and cloud
           if (hasData || hasLocalData()) {
-            setShowSyncDialog(true);
+            const hasDiff = await checkDataDifference();
+            
+            if (hasDiff) {
+              setShowSyncDialog(true);
+            } else {
+              // No difference, mark as synced and continue
+              markDeviceAsSynced();
+              setSyncComplete(true);
+            }
           } else {
+            markDeviceAsSynced();
             setSyncComplete(true);
           }
         }
@@ -150,12 +244,13 @@ export function useSyncManager({
         }
         
         // Stop retrying to prevent infinite loop
+        markDeviceAsSynced();
         setSyncComplete(true);
       }
     };
 
     checkSyncStatus();
-  }, [user, isConfigured, syncComplete, hasLocalData, checkCloudDataExists]);
+  }, [user, isConfigured, syncComplete, hasLocalData, checkCloudDataExists, isFirstLoginOnDevice, markDeviceAsSynced, checkDataDifference]);
 
   // Upload local data to Firebase
   const uploadToCloud = async () => {
@@ -432,6 +527,7 @@ export function useSyncManager({
             lastSync: Timestamp.now(),
           });
         }
+        markDeviceAsSynced();
         setShowSyncDialog(false);
         setSyncComplete(true);
         return;
@@ -445,6 +541,7 @@ export function useSyncManager({
         await mergeData();
       }
 
+      markDeviceAsSynced();
       setShowSyncDialog(false);
       setSyncComplete(true);
       // console.log('✅ Sync completed successfully');
@@ -477,5 +574,8 @@ export function useSyncManager({
     syncing,
     syncComplete,
     handleSyncAction,
+    uploadToCloud,
+    downloadFromCloud,
+    mergeData,
   };
 }

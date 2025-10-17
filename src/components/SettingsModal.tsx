@@ -11,6 +11,12 @@ interface SettingsModalProps {
   settings: AppSettings;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
   onResetSettings: () => void;
+  syncMethods?: {
+    uploadToCloud: () => Promise<void>;
+    downloadFromCloud: () => Promise<void>;
+    mergeData: () => Promise<void>;
+    syncing: boolean;
+  };
 }
 
 export default function SettingsModal({
@@ -18,7 +24,8 @@ export default function SettingsModal({
   onClose,
   settings,
   onUpdateSettings,
-  onResetSettings
+  onResetSettings,
+  syncMethods
 }: SettingsModalProps) {
   const [mounted, setMounted] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -26,6 +33,7 @@ export default function SettingsModal({
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [showApiLimits, setShowApiLimits] = useState(false);
+  const [syncingAction, setSyncingAction] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -73,6 +81,31 @@ export default function SettingsModal({
       onUpdateSettings({ geminiApiKey: '', geminiApiKeyHash: '' });
       setApiKeyInput('');
       setApiKeySaved(false);
+    }
+  };
+
+  const handleSyncAction = async (action: 'upload' | 'download' | 'merge') => {
+    if (!syncMethods) return;
+    
+    setSyncingAction(action);
+    try {
+      if (action === 'upload') {
+        await syncMethods.uploadToCloud();
+        alert('✅ Successfully uploaded local data to cloud!');
+      } else if (action === 'download') {
+        if (confirm('⚠️ This will replace your local data with cloud data. Continue?')) {
+          await syncMethods.downloadFromCloud();
+          alert('✅ Successfully downloaded cloud data!');
+        }
+      } else if (action === 'merge') {
+        await syncMethods.mergeData();
+        alert('✅ Successfully merged local and cloud data!');
+      }
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      alert('❌ Sync failed: ' + (error.message || 'Unknown error'));
+    } finally {
+      setSyncingAction(null);
     }
   };
 
@@ -349,6 +382,53 @@ export default function SettingsModal({
               </div>
             </div>
           </div>
+
+          {/* Cloud Sync Panel */}
+          {user && syncMethods && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">☁️ Cloud Sync</h3>
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Manually sync your data between this device and the cloud. Changes are automatically synced when made.
+                </p>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => handleSyncAction('upload')}
+                    disabled={syncingAction !== null || syncMethods.syncing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {syncingAction === 'upload' ? '⏳ Uploading...' : '⬆️ Upload to Cloud'}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleSyncAction('download')}
+                    disabled={syncingAction !== null || syncMethods.syncing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {syncingAction === 'download' ? '⏳ Downloading...' : '⬇️ Download from Cloud'}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleSyncAction('merge')}
+                    disabled={syncingAction !== null || syncMethods.syncing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {syncingAction === 'merge' ? '⏳ Merging...' : '🔄 Merge Local & Cloud'}
+                  </button>
+                </div>
+                
+                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded p-3">
+                  <p className="font-medium mb-1">ℹ️ Sync Options:</p>
+                  <ul className="space-y-1 ml-3">
+                    <li>• <strong>Upload:</strong> Send local data to cloud</li>
+                    <li>• <strong>Download:</strong> Replace local with cloud data</li>
+                    <li>• <strong>Merge:</strong> Combine both (keeps unique items)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex flex-col space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">

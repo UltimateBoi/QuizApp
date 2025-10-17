@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
@@ -14,6 +14,8 @@ export function useSettingsSync(
   const { user, isConfigured } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const prevSettingsRef = useRef<string>('');
+  const isLoadingRef = useRef<boolean>(false);
 
   // Sync settings to Firebase
   const syncToFirebase = useCallback(async () => {
@@ -41,6 +43,7 @@ export function useSettingsSync(
   const loadFromFirebase = useCallback(async () => {
     if (!user || !db || !isConfigured || !enabled) return;
 
+    isLoadingRef.current = true;
     setSyncing(true);
     try {
       const settingsDoc = await getDoc(doc(db, `users/${user.uid}/settings/app`));
@@ -48,6 +51,10 @@ export function useSettingsSync(
         const firebaseSettings = settingsDoc.data() as AppSettings;
         // Remove Firebase metadata
         const { updatedAt, ...cleanSettings } = firebaseSettings as any;
+        
+        // Update ref to track loaded settings
+        prevSettingsRef.current = JSON.stringify(cleanSettings);
+        
         setLocalSettings(cleanSettings as AppSettings);
         setLastSync(new Date());
       }
@@ -55,6 +62,7 @@ export function useSettingsSync(
       console.error('Error loading settings from Firebase:', error);
     } finally {
       setSyncing(false);
+      isLoadingRef.current = false;
     }
   }, [user, isConfigured, setLocalSettings, enabled]);
 
@@ -69,8 +77,11 @@ export function useSettingsSync(
           const firebaseSettings = doc.data() as AppSettings;
           const { updatedAt, ...cleanSettings } = firebaseSettings as any;
           
-          // Only update if different
-          if (JSON.stringify(cleanSettings) !== JSON.stringify(localSettings)) {
+          const newSettingsStr = JSON.stringify(cleanSettings);
+          
+          // Only update if different and not during loading
+          if (!isLoadingRef.current && newSettingsStr !== prevSettingsRef.current) {
+            prevSettingsRef.current = newSettingsStr;
             setLocalSettings(cleanSettings as AppSettings);
             setLastSync(new Date());
           }
@@ -97,14 +108,16 @@ export function useSettingsSync(
     }
   }, [user, isConfigured, lastSync, loadFromFirebase, enabled]);
 
-  // Auto-sync when settings change
+  // Sync when settings actually change (not on timer)
   useEffect(() => {
-    if (user && isConfigured && lastSync && enabled) {
-      const timeoutId = setTimeout(() => {
-        syncToFirebase();
-      }, 2000); // Debounce syncing
-
-      return () => clearTimeout(timeoutId);
+    if (!user || !isConfigured || !lastSync || !enabled || isLoadingRef.current) return;
+    
+    const currentSettingsStr = JSON.stringify(localSettings);
+    
+    // Only sync if settings have actually changed
+    if (currentSettingsStr !== prevSettingsRef.current) {
+      prevSettingsRef.current = currentSettingsStr;
+      syncToFirebase();
     }
   }, [user, isConfigured, localSettings, lastSync, syncToFirebase, enabled]);
 

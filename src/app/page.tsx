@@ -66,6 +66,9 @@ function HomeContent() {
     syncing,
     syncComplete,
     handleSyncAction,
+    uploadToCloud,
+    downloadFromCloud,
+    mergeData,
   } = useSyncManager({
     localQuizzes: allQuizzes,
     localSessions: quizSessions,
@@ -640,6 +643,12 @@ function HomeContent() {
         settings={settings}
         onUpdateSettings={updateSettings}
         onResetSettings={resetSettings}
+        syncMethods={{
+          uploadToCloud,
+          downloadFromCloud,
+          mergeData,
+          syncing,
+        }}
       />
 
       <SyncDialog
