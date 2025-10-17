@@ -616,7 +616,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-right' : ''}>
           <FlashCardStudy
             deck={studyingDeck}
-            onExit={() => setAppState('flashCards')}
+            onExit={() => updateURL('flashCards')}
           />
         </div>
       )}
