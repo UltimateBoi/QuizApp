@@ -142,20 +142,43 @@ function HomeContent() {
   }, [editingQuiz, createQuiz, updateQuiz, syncQuizzesToFirebase, updateURL]);
 
   const handleSaveBulkQuizzes = useCallback((quizzes: any[]) => {
-    quizzes.forEach(quizData => {
-      createQuiz(quizData);
-    });
+    // Batch create all quizzes at once to avoid race conditions
+    const newQuizzes = quizzes.map(quizData => ({
+      id: `quiz-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      ...quizData,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+    
+    setCustomQuizzes(prev => [...prev, ...newQuizzes]);
     syncQuizzesToFirebase();
     updateURL('home');
-  }, [createQuiz, syncQuizzesToFirebase, updateURL]);
+  }, [setCustomQuizzes, syncQuizzesToFirebase, updateURL]);
 
   const handleSaveBulkFlashcards = useCallback((decks: any[]) => {
-    decks.forEach(deckData => {
-      createDeck(deckData);
+    // Batch create all flashcard decks at once to avoid race conditions
+    const newDecks = decks.map(deckData => {
+      const deckId = `deck-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      return {
+        id: deckId,
+        ...deckData,
+        cards: deckData.cards.map((card: any, index: number) => ({
+          ...card,
+          id: card.id || `card-${Date.now()}-${index}`,
+          deckId: deckId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     });
+    
+    setFlashCardDecks(prev => [...prev, ...newDecks]);
     syncFlashcardsToFirebase();
     updateURL('flashCards');
-  }, [createDeck, syncFlashcardsToFirebase, updateURL]);
+  }, [setFlashCardDecks, syncFlashcardsToFirebase, updateURL]);
 
   // FlashCard handlers
   const handleCreateFlashCards = useCallback(() => {
@@ -616,7 +639,7 @@ function HomeContent() {
         <div className={settings.animations ? 'animate-slide-in-right' : ''}>
           <FlashCardStudy
             deck={studyingDeck}
-            onExit={() => setAppState('flashCards')}
+            onExit={() => updateURL('flashCards')}
           />
         </div>
       )}
