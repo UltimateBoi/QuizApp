@@ -3,7 +3,7 @@
 import { QuizQuestion } from '@/types/quiz';
 
 interface QuestionCardProps {
-  question: QuizQuestion;
+  question: QuizQuestion & { indexMapping?: number[] };
   questionNumber: number;
   totalQuestions: number;
   selectedOptions: number[];
@@ -12,6 +12,8 @@ interface QuestionCardProps {
   showExplanation: boolean;
   isAnswered: boolean;
   autoSubmit: boolean;
+  originalQuestion?: QuizQuestion;
+  isShuffled?: boolean;
 }
 
 export default function QuestionCard({
@@ -23,12 +25,30 @@ export default function QuestionCard({
   onSubmitAnswer,
   showExplanation,
   isAnswered,
-  autoSubmit
+  autoSubmit,
+  originalQuestion,
+  isShuffled = false
 }: QuestionCardProps) {
   
   const isMultiSelect = question.type === 'multiSelect';
   const hasSelectedAnswers = selectedOptions.length > 0;
   const canSubmit = hasSelectedAnswers && !isAnswered;
+  
+  // Get the correct answer indices in the shuffled order
+  const getCorrectShuffledIndices = (): number[] => {
+    if (!isShuffled || !originalQuestion || !question.indexMapping) {
+      return originalQuestion?.answer || question.answer;
+    }
+    // Map original correct indices to shuffled positions
+    const correctIndices: number[] = [];
+    originalQuestion.answer.forEach(originalIndex => {
+      const shuffledIndex = question.indexMapping!.indexOf(originalIndex);
+      if (shuffledIndex !== -1) {
+        correctIndices.push(shuffledIndex);
+      }
+    });
+    return correctIndices;
+  };
   return (
     <div className="card max-w-4xl mx-auto animate-slide-in-up shadow-2xl border-2 border-gray-200 dark:border-gray-700">
       <div className="mb-6">
@@ -51,7 +71,8 @@ export default function QuestionCard({
       <div className="space-y-3">
         {question.options.map((option, index) => {
           const isSelected = selectedOptions.includes(index);
-          const isCorrect = question.answer.includes(index);
+          const correctShuffledIndices = getCorrectShuffledIndices();
+          const isCorrect = correctShuffledIndices.includes(index);
           
           let optionClasses = "w-full p-4 text-left rounded-lg border-2 transition-all duration-300 hover:scale-[1.02] transform ";
           

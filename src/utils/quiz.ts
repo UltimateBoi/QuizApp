@@ -45,3 +45,31 @@ export const shuffleArray = <T>(array: T[]): T[] => {
   }
   return shuffled;
 };
+
+/**
+ * Creates a shuffled version of question options with a mapping to original indices
+ * @param question The quiz question to shuffle
+ * @returns Object containing shuffled options and the index mapping
+ */
+export const shuffleQuestionOptions = (question: QuizQuestion): {
+  shuffledOptions: string[];
+  indexMapping: number[]; // indexMapping[shuffledIndex] = originalIndex
+} => {
+  const indices = question.options.map((_, i) => i);
+  const shuffledIndices = shuffleArray(indices);
+  
+  return {
+    shuffledOptions: shuffledIndices.map(i => question.options[i]),
+    indexMapping: shuffledIndices
+  };
+};
+
+/**
+ * Maps shuffled option indices back to original indices
+ * @param shuffledIndices The indices selected in shuffled order
+ * @param indexMapping The mapping from shuffled to original indices
+ * @returns The original indices
+ */
+export const mapToOriginalIndices = (shuffledIndices: number[], indexMapping: number[]): number[] => {
+  return shuffledIndices.map(shuffledIndex => indexMapping[shuffledIndex]);
+};
