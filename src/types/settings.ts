@@ -7,6 +7,7 @@ export interface AppSettings {
   soundEffects: boolean;
   showTimer: boolean;
   confirmBeforeSubmit: boolean;
+  randomizeAnswers: boolean;
   geminiApiKey?: string; // Encrypted API key for Gemini AI
   geminiApiKeyHash?: string; // SHA-256 hash for verification (stored in Firestore)
 }
@@ -20,6 +21,7 @@ export const defaultSettings: AppSettings = {
   soundEffects: false,
   showTimer: true,
   confirmBeforeSubmit: true,
+  randomizeAnswers: true,
   geminiApiKey: '',
   geminiApiKeyHash: '',
 };

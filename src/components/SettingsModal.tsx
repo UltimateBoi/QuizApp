@@ -187,6 +187,14 @@ export default function SettingsModal({
                 onChange={(checked) => onUpdateSettings({ confirmBeforeSubmit: checked })}
                 icon="✅"
               />
+              
+              <SettingToggle
+                label="Randomize answer order"
+                description="Shuffle the order of answer options in quizzes"
+                checked={settings.randomizeAnswers}
+                onChange={(checked) => onUpdateSettings({ randomizeAnswers: checked })}
+                icon="🔀"
+              />
             </div>
           </div>
 

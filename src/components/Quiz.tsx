@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { QuizQuestion, UserAnswer, QuizSession } from '@/types/quiz';
-import { calculateScore, checkAnswer } from '@/utils/quiz';
+import { calculateScore, checkAnswer, shuffleQuestionOptions, mapToOriginalIndices } from '@/utils/quiz';
 import { useSettings } from '@/hooks/useSettings';
 import QuestionCard from './QuestionCard';
 import ResultsScreen from './ResultsScreen';
@@ -26,6 +26,24 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
   const isAnswered = userAnswers.some(answer => answer.questionIndex === currentQuestionIndex);
+
+  // Shuffle options for each question if randomizeAnswers is enabled
+  // Use useMemo to prevent reshuffling on every render
+  const shuffledQuestion = useMemo(() => {
+    if (!settings.randomizeAnswers) {
+      return {
+        ...currentQuestion,
+        indexMapping: currentQuestion.options.map((_, i) => i) // Identity mapping
+      };
+    }
+    
+    const { shuffledOptions, indexMapping } = shuffleQuestionOptions(currentQuestion);
+    return {
+      ...currentQuestion,
+      options: shuffledOptions,
+      indexMapping
+    };
+  }, [settings.randomizeAnswers, currentQuestion]);
 
   const handleOptionSelect = (optionIndex: number) => {
     if (currentQuestion.type === 'singleSelect') {
@@ -67,12 +85,18 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
 
   const handleSubmitAnswer = (optionsToSubmit?: number[]) => {
     const optionsToUse = optionsToSubmit || selectedOptions;
+    
+    // Map shuffled indices back to original indices for answer checking
+    const originalIndices = settings.randomizeAnswers
+      ? mapToOriginalIndices(optionsToUse, shuffledQuestion.indexMapping)
+      : optionsToUse;
+    
     const timeSpent = Math.floor((new Date().getTime() - questionStartTime.getTime()) / 1000);
-    const isCorrect = checkAnswer(currentQuestion, optionsToUse);
+    const isCorrect = checkAnswer(currentQuestion, originalIndices);
     
     const userAnswer: UserAnswer = {
       questionIndex: currentQuestionIndex,
-      selectedOptions: [...optionsToUse],
+      selectedOptions: [...originalIndices],
       isCorrect,
       timeSpent
     };
@@ -142,7 +166,7 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
   return (
     <div className="max-w-4xl mx-auto">
       <QuestionCard
-        question={currentQuestion}
+        question={shuffledQuestion}
         questionNumber={currentQuestionIndex + 1}
         totalQuestions={questions.length}
         selectedOptions={selectedOptions}
@@ -151,6 +175,8 @@ export default function Quiz({ questions, onQuizComplete }: QuizProps) {
         showExplanation={showExplanation}
         isAnswered={isAnswered}
         autoSubmit={settings.autoSubmit || false}
+        originalQuestion={currentQuestion}
+        isShuffled={settings.randomizeAnswers}
       />
 
       <div className={`mt-8 flex justify-center space-x-4 ${settings.animations ? 'animate-fade-in' : ''}`}>
