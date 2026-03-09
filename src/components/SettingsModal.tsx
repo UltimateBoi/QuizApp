@@ -30,6 +30,7 @@ export default function SettingsModal({
   const [mounted, setMounted] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isChangingApiKey, setIsChangingApiKey] = useState(false);
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [showApiLimits, setShowApiLimits] = useState(false);
@@ -65,6 +66,8 @@ export default function SettingsModal({
         geminiApiKeyHash: hashed
       });
       setApiKeyInput('');
+      setShowApiKey(false);
+      setIsChangingApiKey(false);
       setApiKeySaved(true);
       // Auto-hide success message after 3 seconds
       setTimeout(() => setApiKeySaved(false), 3000);
@@ -80,8 +83,21 @@ export default function SettingsModal({
     if (confirm('Are you sure you want to remove your saved API key?')) {
       onUpdateSettings({ geminiApiKey: '', geminiApiKeyHash: '' });
       setApiKeyInput('');
+      setShowApiKey(false);
+      setIsChangingApiKey(false);
       setApiKeySaved(false);
     }
+  };
+
+  const handleChangeApiKey = () => {
+    setIsChangingApiKey(true);
+    setApiKeyInput('');
+  };
+
+  const handleCancelApiKeyChange = () => {
+    setIsChangingApiKey(false);
+    setApiKeyInput('');
+    setShowApiKey(false);
   };
 
   const handleSyncAction = async (action: 'upload' | 'download' | 'merge') => {
@@ -257,43 +273,80 @@ export default function SettingsModal({
                   Save your API key to use AI-powered quiz and flashcard generation. 
                   {user ? ' Your key is encrypted and hashed before syncing to Firestore.' : ' Sign in to sync across devices.'}
                 </p>
-                <div className="flex space-x-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                      placeholder={settings.geminiApiKey ? '••••••••••••••••' : 'Enter API key'}
-                      className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      {showApiKey ? '👁️' : '👁️‍🗨️'}
-                    </button>
+
+                {/* Saved key display – shown when a key exists and the user is not actively changing it */}
+                {settings.geminiApiKey && !isChangingApiKey ? (
+                  <div>
+                    <div className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <span className="flex-1 text-sm text-gray-500 dark:text-gray-400 select-none tracking-widest">
+                        ••••••••••••••••••••
+                      </span>
+                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">Encrypted</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={handleChangeApiKey}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                      >
+                        Change API key
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveApiKey}
+                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                      >
+                        Remove saved API key
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={handleSaveApiKey}
-                    disabled={savingApiKey}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {savingApiKey ? '...' : 'Save'}
-                  </button>
-                </div>
+                ) : (
+                  /* Input shown when no key exists, or when the user clicked "Change API key" */
+                  <div>
+                    <div className="flex space-x-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type={showApiKey ? 'text' : 'password'}
+                          value={apiKeyInput}
+                          onChange={(e) => setApiKeyInput(e.target.value)}
+                          placeholder="Enter API key"
+                          autoComplete="off"
+                          className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          {showApiKey ? '👁️' : '👁️‍🗨️'}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveApiKey}
+                        disabled={savingApiKey}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {savingApiKey ? '...' : 'Save'}
+                      </button>
+                      {isChangingApiKey && (
+                        <button
+                          type="button"
+                          onClick={handleCancelApiKeyChange}
+                          className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {apiKeySaved && (
                   <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs text-green-800 dark:text-green-200">
                     ✓ API key saved and encrypted successfully! It will sync to your account.
                   </div>
-                )}
-                {settings.geminiApiKey && (
-                  <button
-                    onClick={handleRemoveApiKey}
-                    className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                  >
-                    Remove saved API key
-                  </button>
                 )}
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Get your free API key at{' '}
