@@ -12,6 +12,34 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 
+/**
+ * Recursively converts Firestore Timestamp objects to ISO date strings so that
+ * the rest of the app can handle dates uniformly as strings.
+ */
+function convertTimestamps(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  // Firestore Timestamp – has seconds + nanoseconds and a toDate() method
+  if (
+    typeof obj === 'object' &&
+    'seconds' in (obj as object) &&
+    'nanoseconds' in (obj as object) &&
+    typeof (obj as { toDate?: unknown }).toDate === 'function'
+  ) {
+    return (obj as { toDate: () => Date }).toDate().toISOString();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertTimestamps);
+  }
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      result[key] = convertTimestamps(value);
+    }
+    return result;
+  }
+  return obj;
+}
+
 export function useFirebaseSync<T extends { id: string }>(
   collectionName: string,
   localData: T[],
@@ -71,7 +99,7 @@ export function useFirebaseSync<T extends { id: string }>(
       
       const firebaseData: T[] = [];
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
+        const data = convertTimestamps(doc.data()) as Record<string, unknown>;
         firebaseData.push({
           ...data,
           id: doc.id,
@@ -108,7 +136,7 @@ export function useFirebaseSync<T extends { id: string }>(
       (snapshot) => {
         const firebaseData: T[] = [];
         snapshot.forEach((doc) => {
-          const data = doc.data();
+          const data = convertTimestamps(doc.data()) as Record<string, unknown>;
           firebaseData.push({
             ...data,
             id: doc.id,
